@@ -1,0 +1,59 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const entries = await getCollection('exhibitions', ({ data }) => {
+  return data.draft !== true;
+});
+
+const sortedEntries = entries.sort(
+  (a, b) => b.data.startDate.valueOf() - a.data.startDate.valueOf()
+);
+
+function formatDateRange(start: Date, end?: Date): string {
+  const opts: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+  const s = start.toLocaleDateString('ja-JP', opts);
+  if (!end) return s;
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${start.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric' })} – ${end.toLocaleDateString('ja-JP', { day: 'numeric' })}, ${start.getFullYear()}`;
+  }
+  return `${s} – ${end.toLocaleDateString('ja-JP', opts)}`;
+}
+---
+
+<BaseLayout title="Exhibitions" description="展示記録の一覧">
+  <div class="page-heading">
+    <h1>Exhibitions</h1>
+    <p>{sortedEntries.length} exhibitions</p>
+  </div>
+
+  <ul class="exh-list">
+    {sortedEntries.map((entry) => (
+      <li>
+        <a
+          href={`/exhibitions/${entry.id.replace(/\.md$/, '')}/`}
+          class="exh-item"
+        >
+          <span class="exh-item-year">{entry.data.year}</span>
+          <div class="exh-item-body">
+            <span class="exh-item-type">{entry.data.type}</span>
+            <span class="exh-item-title">{entry.data.title}</span>
+            <span class="exh-item-venue">
+              {entry.data.venue}, {entry.data.city}
+              {entry.data.country !== 'Japan' && `, ${entry.data.country}`}
+              <span style="margin-left: 8px; color: var(--color-border);">|</span>
+              <span style="margin-left: 8px;">{formatDateRange(entry.data.startDate, entry.data.endDate)}</span>
+            </span>
+            {entry.data.tags.length > 0 && (
+              <div class="exh-item-tags">
+                {entry.data.tags.map((tag) => (
+                  <span class="tag">{tag}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </a>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>

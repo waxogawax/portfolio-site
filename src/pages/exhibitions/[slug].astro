@@ -1,0 +1,208 @@
+---
+import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('exhibitions', ({ data }) => {
+    return data.draft !== true;
+  });
+
+  return entries.map((entry) => ({
+    params: { slug: entry.id.replace(/\.md$/, '') },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const d = entry.data;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function formatDateRange(start: Date, end?: Date): string {
+  if (!end) return formatDate(start);
+  return `${formatDate(start)} – ${formatDate(end)}`;
+}
+---
+
+<BaseLayout title={d.title} description={d.description}>
+
+  <!-- 1. Back + Title + Meta -->
+  <div class="exh-header">
+    <a href="/exhibitions/" class="article-back">← Exhibitions</a>
+
+    <h1 class="exh-title">{d.title}</h1>
+
+    <div class="exh-meta-grid">
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">Year</span>
+        <span class="exh-meta-value">{d.year}</span>
+      </div>
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">Date</span>
+        <span class="exh-meta-value">{formatDateRange(d.startDate, d.endDate)}</span>
+      </div>
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">Venue</span>
+        <span class="exh-meta-value">{d.venue}</span>
+      </div>
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">City</span>
+        <span class="exh-meta-value">
+          {d.city}{d.country !== 'Japan' ? `, ${d.country}` : ''}
+        </span>
+      </div>
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">Type</span>
+        <span class="exh-meta-value">{d.type}</span>
+      </div>
+      <div class="exh-meta-item">
+        <span class="exh-meta-label">Role</span>
+        <span class="exh-meta-value">{d.role}</span>
+      </div>
+      {d.artists.length > 0 && (
+        <div class="exh-meta-item" style="grid-column: 1 / -1;">
+          <span class="exh-meta-label">Artists</span>
+          <span class="exh-meta-value">{d.artists.join(', ')}</span>
+        </div>
+      )}
+    </div>
+  </div>
+
+  <!-- 3. Cover image -->
+  {d.cover && (
+    <div class="exh-cover">
+      <img src={d.cover} alt={`${d.title} — cover`} />
+    </div>
+  )}
+
+  <!-- 4. Description + 5. Concept body -->
+  <div class="exh-narrow">
+
+    {d.description && (
+      <div class="exh-section">
+        <p class="exh-description">{d.description}</p>
+      </div>
+    )}
+
+    <div class="exh-section">
+      <p class="exh-section-label">Concept</p>
+      <div class="exh-concept">
+        <Content />
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 6. Image gallery (wider) -->
+  {d.images.length > 0 && (
+    <div class="exh-gallery-section">
+      <p class="exh-section-label">Images</p>
+      <div class="exh-gallery-grid">
+        {d.images.map((img) => (
+          <figure class="exh-gallery-item">
+            <img src={img.src} alt={img.alt ?? img.caption ?? d.title} loading="lazy" />
+            {img.caption && (
+              <figcaption class="exh-gallery-caption">{img.caption}</figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+    </div>
+  )}
+
+  <!-- 7. Links / 8. Press / 9. Instagram / 10. Related -->
+  <div class="exh-narrow">
+
+    {d.links.length > 0 && (
+      <div class="exh-section">
+        <p class="exh-section-label">Links</p>
+        <ul class="exh-links-list">
+          {d.links.map((link) => (
+            <li class="exh-link-item">
+              <a href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {d.press.length > 0 && (
+      <div class="exh-section">
+        <p class="exh-section-label">Press</p>
+        <ul class="exh-press-list">
+          {d.press.map((item) => (
+            <li class="exh-press-item">
+              {item.url ? (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="exh-press-title"
+                >
+                  {item.title}
+                </a>
+              ) : (
+                <span class="exh-press-title">{item.title}</span>
+              )}
+              <span class="exh-press-meta">
+                {item.publication}
+                {item.date && ` / ${item.date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+
+    {d.social?.instagram && (
+      <div class="exh-section">
+        <p class="exh-section-label">Instagram</p>
+        <a
+          href={d.social.instagram}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="exh-instagram-link"
+        >
+          展示の記録を見る
+        </a>
+      </div>
+    )}
+
+    {(d.relatedWorks.length > 0 || d.relatedWritings.length > 0) && (
+      <div class="exh-section">
+        <p class="exh-section-label">Related</p>
+        {d.relatedWorks.length > 0 && (
+          <>
+            <p style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 8px;">Works</p>
+            <ul class="exh-related-list" style="margin-bottom: 20px;">
+              {d.relatedWorks.map((slug) => (
+                <li class="exh-related-item">
+                  <a href={`/works/${slug}/`}>{slug}</a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {d.relatedWritings.length > 0 && (
+          <>
+            <p style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 8px;">Writings</p>
+            <ul class="exh-related-list">
+              {d.relatedWritings.map((slug) => (
+                <li class="exh-related-item">
+                  <a href={`/writings/${slug}/`}>{slug}</a>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    )}
+
+  </div>
+
+</BaseLayout>
