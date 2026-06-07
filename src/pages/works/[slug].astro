@@ -1,0 +1,43 @@
+---
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('works', ({ data }) => {
+    return data.draft !== true;
+  });
+
+  return entries.map((entry) => ({
+    params: { slug: entry.id.replace(/\.md$/, '') },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{entry.data.title} | Works</title>
+  </head>
+  <body>
+    <main>
+      <p><a href="/works/">← Works</a></p>
+
+      <article>
+        <h1>{entry.data.title}</h1>
+        <time datetime={entry.data.date.toISOString()}>
+          {entry.data.date.toLocaleDateString('ja-JP')}
+        </time>
+
+        {entry.data.description && <p>{entry.data.description}</p>}
+
+        <Content />
+      </article>
+
+      <p><a href="/">Home</a></p>
+    </main>
+  </body>
+</html>
