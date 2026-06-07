@@ -1,18 +1,24 @@
 ---
-
+import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
+<BaseLayout title="waxogawa" description="waxogawa のポートフォリオサイト">
+  <div class="home-container">
+    <section class="home-intro">
+      <h1>waxogawa</h1>
+      <p>デザイン、批評、制作の記録。</p>
+    </section>
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>waxogawa portfolio site</title>
-  </head>
-  <body>
-    <main>
-      <h1>waxogawa portfolio site</h1>
-      <p>This site is now deployed with GitHub and Vercel.</p>
-    </main>
-  </body>
-</html>
+    <div class="home-sections">
+      <section class="home-section">
+        <h2>Diary</h2>
+        <a href="/diary/" class="home-section-link">日記一覧を見る →</a>
+      </section>
+
+      <section class="home-section">
+        <h2>Works</h2>
+        <a href="/works/" class="home-section-link">作品一覧を見る →</a>
+      </section>
+    </div>
+  </div>
+</BaseLayout>

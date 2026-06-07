@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const entries = await getCollection('works', ({ data }) => {
   return data.draft !== true;
@@ -10,31 +11,33 @@ const sortedEntries = entries.sort(
 );
 ---
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Works | waxogawa portfolio site</title>
-  </head>
-  <body>
-    <main>
-      <h1>Works</h1>
+<BaseLayout title="Works" description="作品の一覧">
+  <div class="page-heading">
+    <h1>Works</h1>
+    <p>{sortedEntries.length} works</p>
+  </div>
 
-      <ul>
-        {sortedEntries.map((entry) => (
-          <li>
-            <a href={`/works/${entry.id.replace(/\.md$/, '')}/`}>
-              {entry.data.title}
-            </a>
-            <time datetime={entry.data.date.toISOString()}>
-              {entry.data.date.toLocaleDateString('ja-JP')}
-            </time>
-            {entry.data.description && <p>{entry.data.description}</p>}
-          </li>
-        ))}
-      </ul>
-
-      <p><a href="/">Home</a></p>
-    </main>
-  </body>
-</html>
+  <div class="works-grid">
+    {sortedEntries.map((entry) => (
+      <a
+        href={`/works/${entry.id.replace(/\.md$/, '')}/`}
+        class="works-card"
+      >
+        <p class="works-card-date">
+          {entry.data.date.toLocaleDateString('ja-JP')}
+        </p>
+        <h2 class="works-card-title">{entry.data.title}</h2>
+        {entry.data.description && (
+          <p class="works-card-description">{entry.data.description}</p>
+        )}
+        {entry.data.tags.length > 0 && (
+          <div class="works-card-tags">
+            {entry.data.tags.map((tag) => (
+              <span class="tag">{tag}</span>
+            ))}
+          </div>
+        )}
+      </a>
+    ))}
+  </div>
+</BaseLayout>

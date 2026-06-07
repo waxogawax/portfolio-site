@@ -1,5 +1,6 @@
 ---
 import { getCollection, render } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 
 export async function getStaticPaths() {
   const entries = await getCollection('diary', ({ data }) => {
@@ -16,28 +17,21 @@ const { entry } = Astro.props;
 const { Content } = await render(entry);
 ---
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>{entry.data.title} | Diary</title>
-  </head>
-  <body>
-    <main>
-      <p><a href="/diary/">← Diary</a></p>
+<BaseLayout title={entry.data.title} description={entry.data.description}>
+  <div class="article-container">
+    <div class="article-meta">
+      <a href="/diary/" class="article-back">← Diary</a>
+      <h1 class="article-title">{entry.data.title}</h1>
+      <time class="article-date" datetime={entry.data.date.toISOString()}>
+        {entry.data.date.toLocaleDateString('ja-JP')}
+      </time>
+      {entry.data.description && (
+        <p class="article-description">{entry.data.description}</p>
+      )}
+    </div>
 
-      <article>
-        <h1>{entry.data.title}</h1>
-        <time datetime={entry.data.date.toISOString()}>
-          {entry.data.date.toLocaleDateString('ja-JP')}
-        </time>
-
-        {entry.data.description && <p>{entry.data.description}</p>}
-
-        <Content />
-      </article>
-
-      <p><a href="/">Home</a></p>
-    </main>
-  </body>
-</html>
+    <div class="article-body">
+      <Content />
+    </div>
+  </div>
+</BaseLayout>

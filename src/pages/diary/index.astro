@@ -1,5 +1,6 @@
 ---
 import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const entries = await getCollection('diary', ({ data }) => {
   return data.draft !== true;
@@ -10,31 +11,30 @@ const sortedEntries = entries.sort(
 );
 ---
 
-<html lang="ja">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width" />
-    <title>Diary | waxogawa portfolio site</title>
-  </head>
-  <body>
-    <main>
-      <h1>Diary</h1>
+<BaseLayout title="Diary" description="日記の一覧">
+  <div class="page-heading">
+    <h1>Diary</h1>
+    <p>{sortedEntries.length} entries</p>
+  </div>
 
-      <ul>
-        {sortedEntries.map((entry) => (
-          <li>
-            <a href={`/diary/${entry.id.replace(/\.md$/, '')}/`}>
-              {entry.data.title}
-            </a>
-            <time datetime={entry.data.date.toISOString()}>
-              {entry.data.date.toLocaleDateString('ja-JP')}
-            </time>
-            {entry.data.description && <p>{entry.data.description}</p>}
-          </li>
-        ))}
-      </ul>
-
-      <p><a href="/">Home</a></p>
-    </main>
-  </body>
-</html>
+  <ul class="diary-list">
+    {sortedEntries.map((entry) => (
+      <li class="diary-item">
+        <time class="diary-date" datetime={entry.data.date.toISOString()}>
+          {entry.data.date.toLocaleDateString('ja-JP')}
+        </time>
+        <div class="diary-content">
+          <a
+            href={`/diary/${entry.id.replace(/\.md$/, '')}/`}
+            class="diary-title-link"
+          >
+            {entry.data.title}
+          </a>
+          {entry.data.description && (
+            <p class="diary-description">{entry.data.description}</p>
+          )}
+        </div>
+      </li>
+    ))}
+  </ul>
+</BaseLayout>
