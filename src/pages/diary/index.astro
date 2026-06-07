@@ -1,0 +1,40 @@
+---
+import { getCollection } from 'astro:content';
+
+const entries = await getCollection('diary', ({ data }) => {
+  return data.draft !== true;
+});
+
+const sortedEntries = entries.sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Diary | waxogawa portfolio site</title>
+  </head>
+  <body>
+    <main>
+      <h1>Diary</h1>
+
+      <ul>
+        {sortedEntries.map((entry) => (
+          <li>
+            <a href={`/diary/${entry.id.replace(/\.md$/, '')}/`}>
+              {entry.data.title}
+            </a>
+            <time datetime={entry.data.date.toISOString()}>
+              {entry.data.date.toLocaleDateString('ja-JP')}
+            </time>
+            {entry.data.description && <p>{entry.data.description}</p>}
+          </li>
+        ))}
+      </ul>
+
+      <p><a href="/">Home</a></p>
+    </main>
+  </body>
+</html>
