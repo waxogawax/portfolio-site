@@ -61,6 +61,7 @@ const currentPath = Astro.url.pathname;
     --color-text:      #1e1e1c;
     --color-muted:     #6b6b67;
     --color-accent:    #c0392b;
+    --color-neon:      #e5ff00;
     --color-border:    #e0ddd8;
     --color-hover-bg:  #f2f0ec;
 
@@ -159,11 +160,11 @@ const currentPath = Astro.url.pathname;
   .nav-link::after {
     content: '';
     position: absolute;
-    bottom: -3px;
+    bottom: -4px;
     left: 0;
     width: 0;
-    height: 1px;
-    background-color: var(--color-accent);
+    height: 2px;
+    background-color: var(--color-neon);
     transition: width var(--transition);
   }
 
@@ -469,6 +470,7 @@ const currentPath = Astro.url.pathname;
     max-width: var(--width-site);
     margin-inline: auto;
     padding-inline: var(--pad-h);
+    position: relative;
   }
 
   .home-intro {
@@ -494,11 +496,11 @@ const currentPath = Astro.url.pathname;
   }
 
   .home-section h2 {
-    font-size: 0.78rem;
+    font-size: 0.92rem;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--color-muted);
+    color: var(--color-text);
     margin-bottom: 16px;
     padding-bottom: 12px;
     border-bottom: 1px solid var(--color-border);
@@ -509,11 +511,16 @@ const currentPath = Astro.url.pathname;
     font-size: 0.9rem;
     color: var(--color-muted);
     padding-block: 4px;
-    transition: color var(--transition);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    transition: color var(--transition), text-decoration-color var(--transition);
   }
 
   .home-section-link:hover {
-    color: var(--color-accent);
+    color: var(--color-text);
+    text-decoration-color: var(--color-neon);
   }
 
   /* ── Exhibitions list ── */
@@ -871,6 +878,16 @@ const currentPath = Astro.url.pathname;
 
     .exh-gallery-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
     }
   }
 </style>

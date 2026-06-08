@@ -4,6 +4,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout title="waxogawa" description="展示、批評、制作のための個人アーカイブ">
   <div class="home-container">
+
+    <div class="home-blobs" aria-hidden="true">
+      <div class="blob blob--a"></div>
+      <div class="blob blob--b"></div>
+    </div>
+
     <section class="home-intro">
       <h1>waxogawa</h1>
       <p class="home-statement">
@@ -45,10 +51,81 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <a href="/about/" class="home-section-link">プロフィールを見る →</a>
       </section>
     </div>
+
   </div>
 </BaseLayout>
 
 <style>
+  /* ── Blobs ── */
+  .home-blobs {
+    position: absolute;
+    inset: -80px -60px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .blob {
+    position: absolute;
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+
+  .blob--a {
+    width: 520px;
+    height: 420px;
+    background: #e5ff00;
+    opacity: 0.08;
+    top: -60px;
+    left: -120px;
+    animation: blob-morph-a 30s ease-in-out infinite;
+  }
+
+  .blob--b {
+    width: 360px;
+    height: 480px;
+    background: #6b6b67;
+    opacity: 0.055;
+    top: 40px;
+    right: -80px;
+    border-radius: 40% 60% 55% 45% / 65% 35% 60% 40%;
+    animation: blob-morph-b 38s ease-in-out infinite;
+  }
+
+  @keyframes blob-morph-a {
+    0%, 100% {
+      border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+      transform: translate(0, 0);
+    }
+    25% {
+      border-radius: 40% 60% 55% 45% / 40% 65% 35% 60%;
+      transform: translate(18px, -12px);
+    }
+    50% {
+      border-radius: 30% 60% 70% 40% / 50% 55% 30% 60%;
+      transform: translate(8px, 22px);
+    }
+    75% {
+      border-radius: 55% 45% 40% 60% / 65% 30% 65% 35%;
+      transform: translate(-12px, 6px);
+    }
+  }
+
+  @keyframes blob-morph-b {
+    0%, 100% {
+      border-radius: 40% 60% 55% 45% / 65% 35% 60% 40%;
+      transform: translate(0, 0);
+    }
+    33% {
+      border-radius: 60% 40% 40% 60% / 40% 65% 35% 60%;
+      transform: translate(-14px, 18px);
+    }
+    66% {
+      border-radius: 50% 50% 35% 65% / 55% 40% 65% 35%;
+      transform: translate(10px, -14px);
+    }
+  }
+
+  /* ── Intro ── */
   .home-statement {
     font-family: var(--font-serif);
     font-size: 1rem;
@@ -57,6 +134,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     line-height: 1.9;
   }
 
+  /* ── Layer ordering ── */
+  .home-intro,
+  .home-primary,
+  .home-secondary {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Primary grid ── */
   .home-primary {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -64,6 +150,30 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     margin-bottom: 64px;
   }
 
+  .home-primary .home-section h2 {
+    font-size: clamp(1rem, 1.8vw, 1.3rem);
+    color: var(--color-text);
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 14px;
+    padding-left: 10px;
+    border-left: 2px solid var(--color-neon);
+  }
+
+  /* ── Section hover ── */
+  .home-section {
+    padding: 14px;
+    margin: -14px;
+    border-radius: 2px;
+    transition: background-color var(--transition), transform var(--transition);
+  }
+
+  .home-section:hover {
+    background-color: rgba(229, 255, 0, 0.05);
+    transform: translateY(-2px);
+  }
+
+  /* ── Secondary grid ── */
   .home-secondary {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -73,10 +183,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   }
 
   .home-section--secondary h2 {
-    font-size: 0.72rem;
+    font-size: 0.78rem;
   }
 
   .home-section--secondary .home-section-link {
     font-size: 0.83rem;
+  }
+
+  .home-section--secondary:hover {
+    background-color: rgba(107, 107, 103, 0.04);
+    transform: translateY(-1px);
   }
 </style>
