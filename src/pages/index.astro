@@ -3,7 +3,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout title="waxogawa" description="展示、批評、制作のための個人アーカイブ">
-  <div class="home-container">
+
+  <!-- decorative background — behind all content -->
+  <canvas id="turing-bg" aria-hidden="true"></canvas>
+
+  <!-- z-index: 1 raises content above the canvas (position: relative set in BaseLayout) -->
+  <div class="home-container" style="z-index: 1;">
 
     <section class="home-intro">
       <h1>waxogawa</h1>
@@ -26,6 +31,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 </BaseLayout>
 
 <style>
+  /* ── Canvas background ── */
+  #turing-bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
   /* ── Index grid ── */
   .home-index {
     display: grid;
@@ -47,19 +62,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     isolation: isolate;
   }
 
-  /* first column: flush-left */
-  .index-item:nth-child(3n + 1) {
-    padding-left: 0;
-  }
+  .index-item:nth-child(3n + 1) { padding-left: 0; }
 
-  /* column dividers */
   .index-item:not(:nth-child(3n + 1)) {
     border-left: 1px solid var(--color-border);
   }
 
-  /* ── Activator glow (::after)
-     Turing activator: concentrated, bright, grows in 3.5 s
-  ── */
+  /* Activator glow: concentrated, bright, grows in 3.5 s */
   .index-item::after {
     content: '';
     position: absolute;
@@ -71,13 +80,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%;
     pointer-events: none;
     z-index: -1;
-    /* fast exit when hover leaves */
     transition: opacity 0.28s ease, transform 0.28s ease, filter 0.28s ease;
   }
 
-  /* ── Diffusion front (::before)
-     Turing inhibitor: wider, dimmer, delayed, bleeds into neighbors
-  ── */
+  /* Diffusion front: wider, dimmer, delayed, bleeds into neighbors */
   .index-item::before {
     content: '';
     position: absolute;
@@ -91,75 +97,186 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     transition: opacity 0.28s ease, transform 0.28s ease, filter 0.28s ease;
   }
 
-  /* hover: animation takes over from transition for slow growth */
   .index-item:hover::after {
     animation: slime-activate 3.5s cubic-bezier(0.04, 0, 0.1, 1) forwards;
     transition: none;
   }
 
-  /* diffusion starts 0.5 s after activation — "both" covers the delay window */
   .index-item:hover::before {
     animation: slime-diffuse 5s cubic-bezier(0.04, 0, 0.08, 1) 0.5s both;
     transition: none;
   }
 
-  /* activator: bright core spreads asymmetrically */
   @keyframes slime-activate {
-    0% {
-      opacity: 0.06;
-      transform: scale(0.3, 0.2);
-      filter: blur(22px);
-      border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%;
-    }
-    18% {
-      opacity: 0.13;
-      transform: scale(0.62, 0.49);
-      filter: blur(19px);
-    }
-    45% {
-      opacity: 0.18;
-      transform: scale(0.97, 0.82);
-      filter: blur(16px);
-      border-radius: 44% 56% 48% 52% / 56% 44% 52% 48%;
-    }
-    100% {
-      opacity: 0.23;
-      transform: scale(1.48, 1.28);
-      filter: blur(13px);
-      border-radius: 50% 50% 44% 56% / 46% 54% 55% 45%;
-    }
+    0%   { opacity: 0.06; transform: scale(0.3,  0.20); filter: blur(22px); border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%; }
+    18%  { opacity: 0.13; transform: scale(0.62, 0.49); filter: blur(19px); }
+    45%  { opacity: 0.18; transform: scale(0.97, 0.82); filter: blur(16px); border-radius: 44% 56% 48% 52% / 56% 44% 52% 48%; }
+    100% { opacity: 0.23; transform: scale(1.48, 1.28); filter: blur(13px); border-radius: 50% 50% 44% 56% / 46% 54% 55% 45%; }
   }
 
-  /* diffusion: wider, dimmer, bleeds into neighbors */
   @keyframes slime-diffuse {
-    0% {
-      opacity: 0;
-      transform: scale(0.2, 0.15);
-      filter: blur(40px);
-      border-radius: 50% 50% 50% 50%;
-    }
-    25% {
-      opacity: 0.04;
-      transform: scale(0.57, 0.43);
-      filter: blur(38px);
-    }
-    100% {
-      opacity: 0.11;
-      transform: scale(1.58, 1.40);
-      filter: blur(28px);
-      border-radius: 55% 45% 48% 52% / 52% 48% 44% 56%;
-    }
+    0%   { opacity: 0;    transform: scale(0.20, 0.15); filter: blur(40px); border-radius: 50% 50% 50% 50%; }
+    25%  { opacity: 0.04; transform: scale(0.57, 0.43); filter: blur(38px); }
+    100% { opacity: 0.11; transform: scale(1.58, 1.40); filter: blur(28px); border-radius: 55% 45% 48% 52% / 52% 48% 44% 56%; }
   }
 
   /* ── Responsive ── */
   @media (max-width: 600px) {
-    .home-index {
-      grid-template-columns: 1fr;
-    }
-
-    .index-item {
-      padding: 22px 0;
-      border-left: none !important;
-    }
+    .home-index { grid-template-columns: 1fr; }
+    .index-item { padding: 22px 0; border-left: none !important; }
   }
 </style>
+
+<script>
+  const canvas = document.getElementById('turing-bg');
+  if (canvas instanceof HTMLCanvasElement) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const isMobile       = window.innerWidth < 768;
+
+      // Render at reduced resolution — low-res is visually desirable for soft glow
+      const SCALE    = isMobile ? 0.25 : 0.40;
+      const N        = isMobile ? 4    : 7;
+      const FRAME_MS = 1000 / 20; // target 20 fps
+
+      // 5× neon yellow, 2× warm gray
+      const PALETTE = [
+        [229, 255,   0],
+        [229, 255,   0],
+        [229, 255,   0],
+        [229, 255,   0],
+        [229, 255,   0],
+        [212, 210, 204],
+        [212, 210, 204],
+      ];
+
+      function resize() {
+        canvas.width  = Math.floor(window.innerWidth  * SCALE);
+        canvas.height = Math.floor(window.innerHeight * SCALE);
+      }
+      resize();
+      window.addEventListener('resize', () => {
+        resize();
+        if (prefersReduced || isMobile) draw();
+      }, { passive: true });
+
+      // Particle state
+      const pts = Array.from({ length: N }, (_, i) => ({
+        x:     0.1 + Math.random() * 0.8,
+        y:     0.1 + Math.random() * 0.8,
+        vx:    (Math.random() - 0.5) * 0.00006,
+        vy:    (Math.random() - 0.5) * 0.00006,
+        r:     0.18 + Math.random() * 0.12,  // radius (normalised to canvas width)
+        phase: Math.random() * Math.PI * 2,
+        conc:  Math.random(),                 // Turing concentration: 0–1
+        rgb:   PALETTE[i % PALETTE.length],
+      }));
+
+      // ── Simulation step ──────────────────────────────────────────────
+      function update(dt) {
+        const W = canvas.width, H = canvas.height;
+
+        for (let i = 0; i < N; i++) {
+          const p = pts[i];
+
+          // Slow drift
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+
+          // Soft walls — gentle restoring force near edges
+          if (p.x < 0.05) p.vx += 0.000003 * dt;
+          if (p.x > 0.95) p.vx -= 0.000003 * dt;
+          if (p.y < 0.05) p.vy += 0.000003 * dt;
+          if (p.y > 0.95) p.vy -= 0.000003 * dt;
+
+          // Oscillation phase for pulsing
+          p.phase += 0.0004 * dt;
+
+          // ── Turing-like concentration dynamics ──
+          // Each particle tries to reach maximum activation (conc → 1).
+          // Nearby particles inhibit each other at long range, preventing
+          // all particles from activating simultaneously. The result is
+          // a stable spotted pattern where 2–3 spots are bright while
+          // the rest remain suppressed — reminiscent of Turing instability.
+          let inhibition = 0;
+          for (let j = 0; j < N; j++) {
+            if (j === i) continue;
+            const dx = (pts[j].x - p.x) * W;
+            const dy = (pts[j].y - p.y) * H;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const iR = W * 0.42;
+            if (dist < iR) {
+              inhibition += pts[j].conc * (1 - dist / iR);
+            }
+          }
+
+          const rate = 0.00015 * dt;
+          p.conc += rate * (1 - p.conc)          // self-activation
+                  - rate * 2.0 * inhibition       // long-range inhibition
+                  + (Math.random() - 0.5) * 0.0002 * dt; // stochastic noise
+          p.conc = Math.max(0.04, Math.min(1, p.conc));
+        }
+      }
+
+      // ── Render ───────────────────────────────────────────────────────
+      function draw() {
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        for (const p of pts) {
+          const px = p.x * W, py = p.y * H;
+          const pulse  = 0.88 + 0.12 * Math.sin(p.phase);
+          const outerR = p.r * W * pulse;
+          const alpha  = p.conc * 0.06;
+          const [r, g, b] = p.rgb;
+
+          // Outer diffusion halo
+          const og = ctx.createRadialGradient(px, py, 0, px, py, outerR);
+          og.addColorStop(0,    `rgba(${r},${g},${b},${alpha})`);
+          og.addColorStop(0.42, `rgba(${r},${g},${b},${(alpha * 0.38).toFixed(4)})`);
+          og.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = og;
+          ctx.beginPath();
+          ctx.arc(px, py, outerR, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Inner bright core — only for activated (high-concentration) spots
+          if (p.conc > 0.42) {
+            const innerR = p.r * W * 0.30 * pulse;
+            const ia     = (p.conc - 0.42) * 0.072;
+            const ig = ctx.createRadialGradient(px, py, 0, px, py, innerR);
+            ig.addColorStop(0, `rgba(${r},${g},${b},${ia})`);
+            ig.addColorStop(1, `rgba(${r},${g},${b},0)`);
+            ctx.fillStyle = ig;
+            ctx.beginPath();
+            ctx.arc(px, py, innerR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Pre-warm the simulation so the pattern is established at first paint
+      for (let i = 0; i < 400; i++) update(16);
+
+      if (prefersReduced || isMobile) {
+        // Static render for reduced-motion / mobile
+        draw();
+      } else {
+        let lastTime = null;
+        const tick = (now) => {
+          if (lastTime !== null && now - lastTime < FRAME_MS) {
+            requestAnimationFrame(tick);
+            return;
+          }
+          const dt = lastTime === null ? 16 : Math.min(now - lastTime, 60);
+          lastTime = now;
+          update(dt);
+          draw();
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      }
+    }
+  }
+</script>
