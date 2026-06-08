@@ -1,0 +1,190 @@
+---
+// Turing reaction-diffusion field — decorative background for the home page.
+// Canvas is position:fixed, pointer-events:none, z-index:0.
+// Content is expected to sit at z-index ≥ 1.
+---
+
+<canvas id="turing-bg" aria-hidden="true"></canvas>
+
+<style>
+  #turing-bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+</style>
+
+<script>
+  function initTuringField() {
+    const canvas = document.getElementById('turing-bg');
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile  = window.innerWidth < 768;
+    // Render at reduced resolution — low-res suits the soft-glow aesthetic
+    const SCALE     = isMobile ? 0.25 : 0.40;
+    const N         = isMobile ? 5    : 9;
+    const FRAME_MS  = 1000 / 20; // 20 fps target
+
+    // 6× neon yellow, 3× warm gray (for N=9; cycling mod-length for N=5)
+    const PALETTE = [
+      [229, 255,   0],
+      [229, 255,   0],
+      [229, 255,   0],
+      [229, 255,   0],
+      [229, 255,   0],
+      [229, 255,   0],
+      [210, 208, 200],
+      [210, 208, 200],
+      [210, 208, 200],
+    ];
+
+    function resize() {
+      canvas.width  = Math.floor(window.innerWidth  * SCALE);
+      canvas.height = Math.floor(window.innerHeight * SCALE);
+    }
+    resize();
+    window.addEventListener('resize', () => {
+      resize();
+      if (prefersReduced || isMobile) draw();
+    }, { passive: true });
+
+    // ── Particle initialisation ──────────────────────────────────────────
+    // y is biased toward 0.30–0.82 to coincide with the section grid area.
+    const pts = Array.from({ length: N }, (_, i) => ({
+      x:     0.05 + Math.random() * 0.90,
+      y:     0.30 + Math.random() * 0.52,
+      vx:    (Math.random() - 0.5) * 0.00006,
+      vy:    (Math.random() - 0.5) * 0.00006,
+      r:     0.20 + Math.random() * 0.16,  // radius as fraction of canvas width
+      phase: Math.random() * Math.PI * 2,
+      conc:  Math.random(),                 // Turing concentration: 0–1
+      rgb:   PALETTE[i % PALETTE.length],
+    }));
+
+    // ── Simulation ───────────────────────────────────────────────────────
+    function update(dt) {
+      const W = canvas.width, H = canvas.height;
+
+      for (let i = 0; i < N; i++) {
+        const p = pts[i];
+
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+
+        // Soft walls
+        if (p.x < 0.05) p.vx += 0.000003 * dt;
+        if (p.x > 0.95) p.vx -= 0.000003 * dt;
+        if (p.y < 0.08) p.vy += 0.000003 * dt;
+        if (p.y > 0.92) p.vy -= 0.000003 * dt;
+
+        // Gentle y-attractor keeps field centred on the grid area (y ≈ 0.55)
+        p.vy += 0.0000008 * dt * (0.55 - p.y);
+
+        // Phase for slow pulsing
+        p.phase += 0.0004 * dt;
+
+        // ── Turing-like concentration dynamics ───────────────────────────
+        // Self-activation drives each particle toward conc = 1.
+        // Long-range inhibition from neighbours prevents all particles
+        // from activating at once → stable spotted pattern.
+        let inhibition = 0;
+        for (let j = 0; j < N; j++) {
+          if (j === i) continue;
+          const dx = (pts[j].x - p.x) * W;
+          const dy = (pts[j].y - p.y) * H;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const iR = W * 0.42;
+          if (dist < iR) inhibition += pts[j].conc * (1 - dist / iR);
+        }
+
+        const rate = 0.00015 * dt;
+        p.conc += rate * (1 - p.conc)
+                - rate * 2.0 * inhibition
+                + (Math.random() - 0.5) * 0.0002 * dt; // stochastic noise
+        p.conc = Math.max(0.04, Math.min(1, p.conc));
+      }
+    }
+
+    // ── Render ───────────────────────────────────────────────────────────
+    function draw() {
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Base field: a very faint neon yellow wash that defines the reaction zone.
+      // This makes the "field" legible even before any hover interaction.
+      const fTop = H * 0.25;
+      const fBot = H * 0.88;
+      const fieldGrd = ctx.createLinearGradient(0, fTop, 0, fBot);
+      fieldGrd.addColorStop(0,    'rgba(229,255,0,0)');
+      fieldGrd.addColorStop(0.15, 'rgba(229,255,0,0.013)');
+      fieldGrd.addColorStop(0.5,  'rgba(229,255,0,0.020)');
+      fieldGrd.addColorStop(0.85, 'rgba(229,255,0,0.013)');
+      fieldGrd.addColorStop(1,    'rgba(229,255,0,0)');
+      ctx.fillStyle = fieldGrd;
+      ctx.fillRect(0, 0, W, H);
+
+      // Particle halos
+      for (const p of pts) {
+        const px = p.x * W, py = p.y * H;
+        const pulse  = 0.88 + 0.12 * Math.sin(p.phase);
+        const outerR = p.r * W * pulse;
+        const alpha  = p.conc * 0.10;   // raised from 0.06
+        const [r, g, b] = p.rgb;
+
+        // Outer diffusion halo
+        const og = ctx.createRadialGradient(px, py, 0, px, py, outerR);
+        og.addColorStop(0,    `rgba(${r},${g},${b},${alpha.toFixed(4)})`);
+        og.addColorStop(0.40, `rgba(${r},${g},${b},${(alpha * 0.35).toFixed(4)})`);
+        og.addColorStop(1,    `rgba(${r},${g},${b},0)`);
+        ctx.fillStyle = og;
+        ctx.beginPath();
+        ctx.arc(px, py, outerR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Inner bright core — only for activated (high-conc) spots
+        if (p.conc > 0.35) {
+          const innerR = p.r * W * 0.30 * pulse;
+          const ia     = (p.conc - 0.35) * 0.12;
+          const ig = ctx.createRadialGradient(px, py, 0, px, py, innerR);
+          ig.addColorStop(0, `rgba(${r},${g},${b},${ia.toFixed(4)})`);
+          ig.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          ctx.fillStyle = ig;
+          ctx.beginPath();
+          ctx.arc(px, py, innerR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // Pre-warm: run 500 virtual frames so the Turing pattern is already
+    // established when the page first renders.
+    for (let i = 0; i < 500; i++) update(16);
+
+    if (prefersReduced || isMobile) {
+      draw(); // static render only
+      return;
+    }
+
+    let lastTime = null;
+    const tick = (now) => {
+      if (lastTime !== null && now - lastTime < FRAME_MS) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      const dt = lastTime === null ? 16 : Math.min(now - lastTime, 60);
+      lastTime = now;
+      update(dt);
+      draw();
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
+  initTuringField();
+</script>
