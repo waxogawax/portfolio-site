@@ -13,172 +13,153 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </p>
     </section>
 
-    <div class="home-index">
-
-      <div class="home-primary">
-        <a href="/exhibitions/" class="index-item">
-          <span class="index-item-name">Exhibitions</span>
-          <span class="index-item-sub">展示記録</span>
-        </a>
-        <a href="/writings/" class="index-item">
-          <span class="index-item-name">Writings</span>
-          <span class="index-item-sub">批評・エッセイ・テキスト</span>
-        </a>
-        <a href="/works/" class="index-item">
-          <span class="index-item-name">Works</span>
-          <span class="index-item-sub">作品一覧</span>
-        </a>
-      </div>
-
-      <div class="home-secondary">
-        <a href="/diary/" class="index-item-sm">Diary</a>
-        <a href="/research/" class="index-item-sm">Research</a>
-        <a href="/about/" class="index-item-sm">About</a>
-      </div>
-
-    </div>
+    <nav class="home-index" aria-label="コンテンツ一覧">
+      <a href="/exhibitions/" class="index-item">Exhibitions</a>
+      <a href="/writings/"   class="index-item">Writings</a>
+      <a href="/works/"      class="index-item">Works</a>
+      <a href="/diary/"      class="index-item">Diary</a>
+      <a href="/research/"   class="index-item">Research</a>
+      <a href="/about/"      class="index-item">About</a>
+    </nav>
 
   </div>
 </BaseLayout>
 
 <style>
-  /* ── Primary index ── */
-  .home-primary {
+  /* ── Index grid ── */
+  .home-index {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 0 2px;
     border-top: 1px solid var(--color-border);
-    margin-bottom: 0;
   }
 
   .index-item {
     display: flex;
-    flex-direction: column;
-    gap: 7px;
-    padding: 28px 0 28px 0;
+    align-items: center;
+    padding: 30px 24px;
     color: var(--color-text);
     text-decoration: none;
+    font-size: clamp(0.92rem, 1.5vw, 1.08rem);
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    border-bottom: 1px solid var(--color-border);
     position: relative;
     isolation: isolate;
-    transition: color var(--transition);
   }
 
-  .index-item:not(:first-child) {
-    padding-left: 28px;
+  /* first column: flush-left */
+  .index-item:nth-child(3n + 1) {
+    padding-left: 0;
+  }
+
+  /* column dividers */
+  .index-item:not(:nth-child(3n + 1)) {
     border-left: 1px solid var(--color-border);
   }
 
-  /* seeping glow — organic spread on hover */
+  /* ── Activator glow (::after)
+     Turing activator: concentrated, bright, grows in 3.5 s
+  ── */
   .index-item::after {
     content: '';
     position: absolute;
-    inset: 12px -12px;
-    background: var(--color-neon);
+    inset: -8px -32px;
+    background: radial-gradient(ellipse at 50% 50%, var(--color-neon) 0%, transparent 68%);
     opacity: 0;
-    border-radius: 60% 40% 50% 50% / 50% 50% 40% 60%;
-    filter: blur(24px);
-    transform: scaleX(0.45) scaleY(0.25);
-    transition:
-      opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-      filter 0.45s ease,
-      border-radius 0.65s ease;
+    transform: scale(0.3, 0.2);
+    filter: blur(20px);
+    border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%;
     pointer-events: none;
     z-index: -1;
+    /* fast exit when hover leaves */
+    transition: opacity 0.28s ease, transform 0.28s ease, filter 0.28s ease;
   }
 
-  .index-item:hover::after {
-    opacity: 0.14;
-    transform: scaleX(1) scaleY(1);
-    filter: blur(14px);
-    border-radius: 45% 55% 45% 55% / 55% 45% 55% 45%;
-  }
-
-  .index-item-name {
-    font-family: var(--font-sans);
-    font-size: clamp(1rem, 2vw, 1.25rem);
-    font-weight: 500;
-    letter-spacing: -0.01em;
-    line-height: 1.2;
-    transition: color var(--transition);
-  }
-
-  .index-item:hover .index-item-name {
-    color: var(--color-text);
-  }
-
-  .index-item-sub {
-    font-size: 0.75rem;
-    color: var(--color-muted);
-    letter-spacing: 0.03em;
-    line-height: 1.4;
-    transition: color var(--transition);
-  }
-
-  /* ── Secondary index ── */
-  .home-secondary {
-    display: flex;
-    gap: 0;
-    border-top: 1px solid var(--color-border);
-    padding-top: 0;
-  }
-
-  .index-item-sm {
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--color-muted);
-    padding: 16px 20px 16px 0;
-    text-decoration: none;
-    position: relative;
-    isolation: isolate;
-    transition: color var(--transition);
-  }
-
-  .index-item-sm::after {
+  /* ── Diffusion front (::before)
+     Turing inhibitor: wider, dimmer, delayed, bleeds into neighbors
+  ── */
+  .index-item::before {
     content: '';
     position: absolute;
-    inset: 6px -6px;
-    background: var(--color-neon);
+    inset: -28px -56px;
+    background: radial-gradient(ellipse at 50% 50%, var(--color-neon) 0%, transparent 60%);
     opacity: 0;
-    border-radius: 50%;
-    filter: blur(14px);
-    transform: scale(0.3);
-    transition:
-      opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
-      filter 0.35s ease;
+    transform: scale(0.2, 0.15);
+    filter: blur(36px);
     pointer-events: none;
     z-index: -1;
+    transition: opacity 0.28s ease, transform 0.28s ease, filter 0.28s ease;
   }
 
-  .index-item-sm:hover {
-    color: var(--color-text);
+  /* hover: animation takes over from transition for slow growth */
+  .index-item:hover::after {
+    animation: slime-activate 3.5s cubic-bezier(0.04, 0, 0.1, 1) forwards;
+    transition: none;
   }
 
-  .index-item-sm:hover::after {
-    opacity: 0.1;
-    transform: scale(1);
-    filter: blur(8px);
+  /* diffusion starts 0.5 s after activation — "both" covers the delay window */
+  .index-item:hover::before {
+    animation: slime-diffuse 5s cubic-bezier(0.04, 0, 0.08, 1) 0.5s both;
+    transition: none;
+  }
+
+  /* activator: bright core spreads asymmetrically */
+  @keyframes slime-activate {
+    0% {
+      opacity: 0.06;
+      transform: scale(0.3, 0.2);
+      filter: blur(22px);
+      border-radius: 60% 40% 55% 45% / 50% 60% 40% 55%;
+    }
+    18% {
+      opacity: 0.13;
+      transform: scale(0.62, 0.49);
+      filter: blur(19px);
+    }
+    45% {
+      opacity: 0.18;
+      transform: scale(0.97, 0.82);
+      filter: blur(16px);
+      border-radius: 44% 56% 48% 52% / 56% 44% 52% 48%;
+    }
+    100% {
+      opacity: 0.23;
+      transform: scale(1.48, 1.28);
+      filter: blur(13px);
+      border-radius: 50% 50% 44% 56% / 46% 54% 55% 45%;
+    }
+  }
+
+  /* diffusion: wider, dimmer, bleeds into neighbors */
+  @keyframes slime-diffuse {
+    0% {
+      opacity: 0;
+      transform: scale(0.2, 0.15);
+      filter: blur(40px);
+      border-radius: 50% 50% 50% 50%;
+    }
+    25% {
+      opacity: 0.04;
+      transform: scale(0.57, 0.43);
+      filter: blur(38px);
+    }
+    100% {
+      opacity: 0.11;
+      transform: scale(1.58, 1.40);
+      filter: blur(28px);
+      border-radius: 55% 45% 48% 52% / 52% 48% 44% 56%;
+    }
   }
 
   /* ── Responsive ── */
   @media (max-width: 600px) {
-    .home-primary {
+    .home-index {
       grid-template-columns: 1fr;
-      gap: 0;
     }
 
-    .index-item:not(:first-child) {
-      padding-left: 0;
-      border-left: none;
-      border-top: 1px solid var(--color-border);
-    }
-
-    .home-secondary {
-      flex-wrap: wrap;
-      gap: 0 4px;
+    .index-item {
+      padding: 22px 0;
+      border-left: none !important;
     }
   }
 </style>
