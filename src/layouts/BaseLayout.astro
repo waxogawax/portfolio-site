@@ -25,10 +25,13 @@ const currentPath = Astro.url.pathname;
       <div class="container">
         <a href="/" class="site-title">{siteName}</a>
         <nav class="site-nav" aria-label="メインナビゲーション">
-          <a href="/" class:list={['nav-link', { active: currentPath === '/' }]}>Home</a>
-          <a href="/diary/" class:list={['nav-link', { active: currentPath.startsWith('/diary') }]}>Diary</a>
-          <a href="/works/" class:list={['nav-link', { active: currentPath.startsWith('/works') }]}>Works</a>
           <a href="/exhibitions/" class:list={['nav-link', { active: currentPath.startsWith('/exhibitions') }]}>Exhibitions</a>
+          <a href="/writings/" class:list={['nav-link', { active: currentPath.startsWith('/writings') }]}>Writings</a>
+          <a href="/works/" class:list={['nav-link', { active: currentPath.startsWith('/works') }]}>Works</a>
+          <span class="nav-divider" aria-hidden="true"></span>
+          <a href="/diary/" class:list={['nav-link', { active: currentPath.startsWith('/diary') }]}>Diary</a>
+          <a href="/research/" class:list={['nav-link', { active: currentPath.startsWith('/research') }]}>Research</a>
+          <a href="/about/" class:list={['nav-link', { active: currentPath.startsWith('/about') }]}>About</a>
         </nav>
       </div>
     </header>
@@ -132,7 +135,15 @@ const currentPath = Astro.url.pathname;
   /* ── Nav ── */
   .site-nav {
     display: flex;
-    gap: 28px;
+    align-items: center;
+    gap: 22px;
+  }
+
+  .nav-divider {
+    display: block;
+    width: 1px;
+    height: 12px;
+    background-color: var(--color-border);
   }
 
   .nav-link {
@@ -480,12 +491,6 @@ const currentPath = Astro.url.pathname;
     color: var(--color-muted);
     max-width: 560px;
     line-height: 1.8;
-  }
-
-  .home-sections {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 48px;
   }
 
   .home-section h2 {
@@ -842,7 +847,12 @@ const currentPath = Astro.url.pathname;
     }
 
     .site-nav {
-      gap: 12px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .nav-divider {
+      display: none;
     }
 
     .exh-item {

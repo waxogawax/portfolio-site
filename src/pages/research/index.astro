@@ -1,0 +1,106 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Research" description="研究・調査活動の記録">
+  <div class="article-container">
+    <div class="page-heading" style="padding-inline: 0; margin-bottom: 56px;">
+      <h1>Research</h1>
+      <p>デザイン史・批評・メディア論を中心に研究しています。</p>
+    </div>
+
+    <div class="research-body">
+      <section class="research-section">
+        <h2 class="research-section-label">関心領域</h2>
+        <ul class="research-topics">
+          <li>デザイン批評・デザイン史</li>
+          <li>メディア論・視覚文化</li>
+          <li>展示論・キュレーション実践</li>
+        </ul>
+      </section>
+
+      <section class="research-section">
+        <h2 class="research-section-label">Academic Profile</h2>
+        <p class="research-text">
+          researchmap にて業績一覧を公開しています。
+        </p>
+        <a
+          href="https://researchmap.jp/"
+          class="research-external-link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          researchmap ↗
+        </a>
+      </section>
+
+      <section class="research-section">
+        <h2 class="research-section-label">Publications</h2>
+        <p class="research-text research-placeholder">準備中です。</p>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .research-body {
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+  }
+
+  .research-section-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .research-topics {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .research-topics li {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    padding-left: 1em;
+    position: relative;
+  }
+
+  .research-topics li::before {
+    content: '–';
+    position: absolute;
+    left: 0;
+    color: var(--color-muted);
+  }
+
+  .research-text {
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+
+  .research-placeholder {
+    font-style: italic;
+  }
+
+  .research-external-link {
+    font-size: 0.88rem;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+    transition: color var(--transition);
+    display: inline-block;
+  }
+
+  .research-external-link:hover {
+    color: var(--color-accent);
+  }
+</style>

@@ -2,28 +2,81 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
-<BaseLayout title="waxogawa" description="waxogawa のポートフォリオサイト">
+<BaseLayout title="waxogawa" description="展示、批評、制作のための個人アーカイブ">
   <div class="home-container">
     <section class="home-intro">
       <h1>waxogawa</h1>
-      <p>デザイン、批評、制作の記録。</p>
+      <p class="home-statement">
+        展示、批評、研究、制作の記録。<br />
+        デザインと言語のあいだで考え、作ることを続けています。
+      </p>
     </section>
 
-    <div class="home-sections">
+    <div class="home-primary">
       <section class="home-section">
-        <h2>Diary</h2>
-        <a href="/diary/" class="home-section-link">日記一覧を見る →</a>
+        <h2>Exhibitions</h2>
+        <a href="/exhibitions/" class="home-section-link">展示記録を見る →</a>
+      </section>
+
+      <section class="home-section">
+        <h2>Writings</h2>
+        <a href="/writings/" class="home-section-link">テキストを見る →</a>
       </section>
 
       <section class="home-section">
         <h2>Works</h2>
         <a href="/works/" class="home-section-link">作品一覧を見る →</a>
       </section>
+    </div>
 
-      <section class="home-section">
-        <h2>Exhibitions</h2>
-        <a href="/exhibitions/" class="home-section-link">展示記録を見る →</a>
+    <div class="home-secondary">
+      <section class="home-section home-section--secondary">
+        <h2>Diary</h2>
+        <a href="/diary/" class="home-section-link">日記を見る →</a>
+      </section>
+
+      <section class="home-section home-section--secondary">
+        <h2>Research</h2>
+        <a href="/research/" class="home-section-link">研究情報を見る →</a>
+      </section>
+
+      <section class="home-section home-section--secondary">
+        <h2>About</h2>
+        <a href="/about/" class="home-section-link">プロフィールを見る →</a>
       </section>
     </div>
   </div>
 </BaseLayout>
+
+<style>
+  .home-statement {
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    color: var(--color-muted);
+    max-width: 480px;
+    line-height: 1.9;
+  }
+
+  .home-primary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 40px;
+    margin-bottom: 64px;
+  }
+
+  .home-secondary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 32px;
+    padding-top: 40px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .home-section--secondary h2 {
+    font-size: 0.72rem;
+  }
+
+  .home-section--secondary .home-section-link {
+    font-size: 0.83rem;
+  }
+</style>

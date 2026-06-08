@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="About" description="waxogawa について">
+  <div class="article-container">
+    <div class="page-heading" style="padding-inline: 0; margin-bottom: 56px;">
+      <h1>About</h1>
+    </div>
+
+    <div class="about-body">
+      <section class="about-section">
+        <p class="about-bio">
+          デザイナー・研究者。展示、批評、制作を横断しながら活動しています。
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 class="about-section-label">CV</h2>
+        <p class="about-text">
+          詳細は準備中です。
+          {/* <a href="/cv/" class="about-link">CV を見る →</a> */}
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2 class="about-section-label">Links</h2>
+        <ul class="about-links-list">
+          <li>
+            <a
+              href="https://researchmap.jp/"
+              class="about-external-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              researchmap ↗
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section class="about-section">
+        <h2 class="about-section-label">Contact</h2>
+        <a href="mailto:ogawa.rakuki@keio.jp" class="about-link">
+          ogawa.rakuki@keio.jp
+        </a>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .about-body {
+    display: flex;
+    flex-direction: column;
+    gap: 48px;
+  }
+
+  .about-bio {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 1.9;
+    color: var(--color-text);
+    max-width: 560px;
+  }
+
+  .about-section-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .about-text {
+    font-size: 0.95rem;
+    color: var(--color-muted);
+    line-height: 1.7;
+  }
+
+  .about-links-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .about-external-link,
+  .about-link {
+    font-size: 0.9rem;
+    color: var(--color-text);
+    transition: color var(--transition);
+    display: inline-block;
+  }
+
+  .about-external-link:hover,
+  .about-link:hover {
+    color: var(--color-accent);
+  }
+</style>

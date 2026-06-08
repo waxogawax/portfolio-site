@@ -70,8 +70,20 @@ const exhibitions = defineCollection({
   }),
 });
 
+const writings = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/content/writings' }),
+  schema: z.object({
+    title: z.string(),
+    date: z.coerce.date(),
+    description: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    draft: z.boolean().default(false),
+  }),
+});
+
 export const collections = {
   diary,
   works,
   exhibitions,
+  writings,
 };

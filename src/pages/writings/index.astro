@@ -1,0 +1,56 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const entries = await getCollection('writings', ({ data }) => {
+  return data.draft !== true;
+});
+
+const sortedEntries = entries.sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf()
+);
+---
+
+<BaseLayout title="Writings" description="批評・エッセイ・テキストの一覧">
+  <div class="page-heading">
+    <h1>Writings</h1>
+    <p>{sortedEntries.length} texts</p>
+  </div>
+
+  {sortedEntries.length === 0 ? (
+    <div class="empty-state">
+      <p>準備中です。</p>
+    </div>
+  ) : (
+    <ul class="diary-list">
+      {sortedEntries.map((entry) => (
+        <li class="diary-item">
+          <time class="diary-date" datetime={entry.data.date.toISOString()}>
+            {entry.data.date.toLocaleDateString('ja-JP')}
+          </time>
+          <div class="diary-content">
+            <a
+              href={`/writings/${entry.id.replace(/\.md$/, '')}/`}
+              class="diary-title-link"
+            >
+              {entry.data.title}
+            </a>
+            {entry.data.description && (
+              <p class="diary-description">{entry.data.description}</p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>
+
+<style>
+  .empty-state {
+    max-width: var(--width-site);
+    margin-inline: auto;
+    padding-inline: var(--pad-h);
+    color: var(--color-muted);
+    font-size: 0.9rem;
+  }
+</style>
