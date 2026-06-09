@@ -205,4 +205,70 @@ function formatDateRange(start: Date, end?: Date): string {
 
   </div>
 
+  <!-- Lightbox overlay -->
+  <div class="exh-lightbox" id="exh-lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="画像の拡大表示">
+    <img class="exh-lightbox-img" src="" alt="" />
+  </div>
+
 </BaseLayout>
+
+<style>
+  .exh-gallery-item img {
+    cursor: zoom-in;
+  }
+
+  .exh-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .exh-lightbox.is-open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .exh-lightbox-img {
+    max-width: 92vw;
+    max-height: 92vh;
+    object-fit: contain;
+    display: block;
+  }
+</style>
+
+<script>
+  const lightbox = document.getElementById('exh-lightbox') as HTMLElement;
+  const lightboxImg = lightbox.querySelector('.exh-lightbox-img') as HTMLImageElement;
+
+  function openLightbox(src: string, alt: string) {
+    lightboxImg.src = src;
+    lightboxImg.alt = alt;
+    lightbox.classList.add('is-open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('is-open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  document.querySelectorAll<HTMLImageElement>('.exh-gallery-item img').forEach(img => {
+    img.addEventListener('click', () => openLightbox(img.src, img.alt));
+  });
+
+  lightbox.addEventListener('click', closeLightbox);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+</script>
