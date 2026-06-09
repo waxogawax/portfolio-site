@@ -6,7 +6,7 @@ endDate: "2024-02-18"
 venue: "biscuit gallery"
 city: "Tokyo"
 country: "Japan"
-type: "group exhibition"
+type: "group"
 role: "curator"
 artists:
   - "田中小太郎、袁方洲、ペロンミ、Lily Spacey、添田奈那"
