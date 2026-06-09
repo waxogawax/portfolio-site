@@ -1,15 +1,15 @@
 ---
-title: "境界の余白"
+title: "帰路にまざまざと知る"
 year: 2024
-startDate: "2024-11-01"
-endDate: "2024-11-30"
-venue: "Gallery SIDE 2"
+startDate: "2024-02-01"
+endDate: "2024-02-18"
+venue: "biscuit gallery"
 city: "Tokyo"
 country: "Japan"
-type: "solo"
-role: "artist"
+type: "group exhibition"
+role: "curator"
 artists:
-  - "waxogawa"
+  - "田中小太郎、袁方洲、ペロンミ、Lily Spacey、添田奈那"
 description: "空間と身体の境界を素材と光で問い直す個展。壁と床の接合部、窓枠が切り取る外光、素材の自重が生む変形——見過ごされてきた閾値に焦点を当てた。"
 cover: "/exhibition_image/biscuit/main.png"
 images:
@@ -65,3 +65,11 @@ draft: false
 「余白」という言葉を展示タイトルに選んだのは、ネガティブ・スペースへの関心からだ。しかしここでいう余白は、「何もない空間」ではない。むしろ、意味が定着するまえの状態——境界が確定するまえの曖昧な領域——として理解している。
 
 ギャラリーを訪れた人が、自分の身体が空間を占有する仕方に、わずかでも意識を向けることができたなら、この試みは成功したといえるだろう。
+
+キュレーター：waxogawa/小川楽生
+エディトリアル・デザイン：waxogawa
+インストール補助：柴原佳範
+PR：biscuit gallery
+
+本展示はbiscuit galleryの「若手キュレーター支援事業」として開催されました。
+
