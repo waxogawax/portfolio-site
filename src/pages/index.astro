@@ -1,6 +1,12 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TuringField from '../components/TuringField.astro';
+import { getCollection } from 'astro:content';
+
+const allExhibitions = await getCollection('exhibitions', ({ data }) => !data.draft);
+const recentExh = allExhibitions
+  .sort((a, b) => b.data.startDate.valueOf() - a.data.startDate.valueOf())
+  .slice(0, 5);
 ---
 
 <BaseLayout title="waxogawa" description="展示、批評、制作のための個人アーカイブ">
@@ -26,6 +32,29 @@ import TuringField from '../components/TuringField.astro';
       <a href="/research/"   class="index-item">Research</a>
       <a href="/about/"      class="index-item">About</a>
     </nav>
+
+    {recentExh.length > 0 && (
+      <section class="home-news" aria-label="最新情報">
+        <h2 class="home-news-label">News</h2>
+        <ul class="news-list">
+          {recentExh.map((exh) => {
+            const typeLabel = exh.data.type === 'solo'    ? 'Solo Exhibition'
+                            : exh.data.type === 'curated' ? 'Curated Exhibition'
+                            : 'Exhibition';
+            const d = exh.data.startDate;
+            const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+            return (
+              <li class="news-item">
+                <time class="news-date" datetime={d.toISOString()}>{dateStr}</time>
+                <span class="news-type">{typeLabel}</span>
+                <a href={`/exhibitions/${exh.id}/`} class="news-link">{exh.data.title}</a>
+                <span class="news-venue">{exh.data.venue}, {exh.data.city}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+    )}
 
   </div>
 </BaseLayout>
@@ -152,9 +181,79 @@ import TuringField from '../components/TuringField.astro';
     transition: opacity 1.2s ease-out, transform 1.2s ease-out, filter 1.0s ease-out;
   }
 
+  /* ── News section ── */
+  .home-news {
+    padding-top: 48px;
+    padding-bottom: 40px;
+  }
+
+  .home-news-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    padding-bottom: 12px;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .news-list {
+    list-style: none;
+  }
+
+  .news-item {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+  }
+
+  .news-date {
+    font-size: 0.80rem;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+    flex-shrink: 0;
+    min-width: 4.2em;
+  }
+
+  .news-type {
+    font-size: 0.65rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    padding: 2px 8px 1px;
+    flex-shrink: 0;
+  }
+
+  .news-link {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 500;
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .news-link:hover {
+    text-decoration: underline;
+    text-decoration-color: var(--color-neon);
+    text-underline-offset: 3px;
+  }
+
+  .news-venue {
+    font-size: 0.80rem;
+    color: var(--color-muted);
+    flex-shrink: 0;
+  }
+
   /* ── Responsive ── */
   @media (max-width: 600px) {
     .home-index { grid-template-columns: 1fr; }
     .index-item { padding: 22px 0; border-left: none !important; }
+    .news-venue { display: none; }
   }
 </style>

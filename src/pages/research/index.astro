@@ -4,29 +4,74 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 <BaseLayout title="Research" description="研究・調査活動の記録">
   <div class="article-container">
-    <div class="page-heading" style="padding-inline: 0; margin-bottom: 56px;">
-      <h1>Research</h1>
-      <p>現代アートとそのキュレーション、人類学を中心的な関心領域として、研究を進めています。</p>
-    </div>
+
+    <p class="research-statement">
+      キュレーター・研究者。<br />
+      展示、批評、制作を横断しながら活動しています。
+    </p>
 
     <div class="research-body">
+
+      <section class="research-section">
+        <h2 class="research-section-label">学術・研究</h2>
+        <ul class="affil-list">
+          <li class="affil-item">
+            <span class="affil-org">慶應義塾大学大学院 政策・メディア研究科</span>
+            <span class="affil-role">後期博士課程在籍中</span>
+          </li>
+          <li class="affil-item">
+            <span class="affil-org">人間文化機構 総合地球環境学研究所</span>
+            <span class="affil-role">共同研究員</span>
+          </li>
+          <li class="affil-item">
+            <span class="affil-org">科学技術振興機構（JST）次世代研究者挑戦的研究プログラム</span>
+            <span class="affil-role">フェロー</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="research-section">
+        <h2 class="research-section-label">事業・法人</h2>
+        <ul class="affil-list">
+          <li class="affil-item">
+            <span class="affil-org">株式会社 金丸商店</span>
+            <span class="affil-role">共同代表</span>
+          </li>
+          <li class="affil-item">
+            <span class="affil-org">一般社団法人 HERO's Lab</span>
+            <span class="affil-role">共同理事</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="research-section">
+        <h2 class="research-section-label">その他</h2>
+        <ul class="affil-list">
+          <li class="affil-item">
+            <span class="affil-org">一般社団法人 6okken</span>
+            <span class="affil-role">R&amp;Dメンバー</span>
+          </li>
+          <li class="affil-item">
+            <span class="affil-org">一般社団法人 みなとメディアミュージアム</span>
+            <span class="affil-role">実行委員</span>
+          </li>
+        </ul>
+      </section>
+
       <section class="research-section">
         <h2 class="research-section-label">関心領域</h2>
         <ul class="research-topics">
-          <li>現代アート・キュレーション</li>
-          <li>人類学（レヴィ=ストロース、アルフォンソ・リンギス、エドゥアルド・ヴィヴェイロス・デ・カストロ）</li>
-          <li>展示論・表象文化論・文学理論（フィクション理論）</li>
-          <li>災害看護・ケア・当事者性</li>
+          <li>デザイン批評・デザイン史</li>
+          <li>メディア論・視覚文化</li>
+          <li>展示論・キュレーション実践</li>
         </ul>
       </section>
 
       <section class="research-section">
         <h2 class="research-section-label">Academic Profile</h2>
-        <p class="research-text">
-          researchmap にて業績一覧を公開しています。
-        </p>
+        <p class="research-text">researchmap にて業績一覧を公開しています。</p>
         <a
-          href="https://researchmap.jp/waxogawa"
+          href="https://researchmap.jp/"
           class="research-external-link"
           target="_blank"
           rel="noopener noreferrer"
@@ -39,15 +84,27 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         <h2 class="research-section-label">Publications</h2>
         <p class="research-text research-placeholder">準備中です。</p>
       </section>
+
     </div>
   </div>
 </BaseLayout>
 
 <style>
+  .research-statement {
+    font-family: var(--font-serif);
+    font-size: 1.08rem;
+    line-height: 2.0;
+    color: var(--color-text);
+    max-width: 560px;
+    padding-bottom: 52px;
+    margin-bottom: 52px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
   .research-body {
     display: flex;
     flex-direction: column;
-    gap: 56px;
+    gap: 48px;
   }
 
   .research-section-label {
@@ -56,9 +113,38 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-muted);
-    margin-bottom: 20px;
+    margin-bottom: 0;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--color-border);
+  }
+
+  .affil-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .affil-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 20px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .affil-org {
+    font-size: 0.90rem;
+    color: var(--color-text);
+    line-height: 1.55;
+  }
+
+  .affil-role {
+    font-size: 0.80rem;
+    color: var(--color-muted);
+    flex-shrink: 0;
+    text-align: right;
+    white-space: nowrap;
   }
 
   .research-topics {
@@ -66,12 +152,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
     display: flex;
     flex-direction: column;
     gap: 10px;
+    padding-top: 16px;
   }
 
   .research-topics li {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     color: var(--color-text);
-    padding-left: 1em;
+    padding-left: 1.2em;
     position: relative;
   }
 
@@ -83,10 +170,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
   }
 
   .research-text {
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     color: var(--color-muted);
     line-height: 1.7;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
+    padding-top: 14px;
   }
 
   .research-placeholder {
@@ -103,5 +191,15 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
   .research-external-link:hover {
     color: var(--color-accent);
+  }
+
+  @media (max-width: 600px) {
+    .affil-item {
+      flex-direction: column;
+      gap: 4px;
+    }
+    .affil-role {
+      text-align: left;
+    }
   }
 </style>
