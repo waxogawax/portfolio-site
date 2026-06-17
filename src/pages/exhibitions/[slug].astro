@@ -1,21 +1,27 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import TermGraphPanel from '../../components/TermGraphPanel.astro';
+import { buildTermGraph } from '../../lib/termGraph.ts';
 
 export async function getStaticPaths() {
-  const entries = await getCollection('exhibitions', ({ data }) => {
-    return data.draft !== true;
-  });
+  const [entries, graph] = await Promise.all([
+    getCollection('exhibitions', ({ data }) => data.draft !== true),
+    buildTermGraph(),
+  ]);
 
   return entries.map((entry) => ({
     params: { slug: entry.id.replace(/\.md$/, '') },
-    props: { entry },
+    props: { entry, graph },
   }));
 }
 
-const { entry } = Astro.props;
+const { entry, graph } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
+
+const pageId = `exhibitions/${entry.id.replace(/\.md$/, '')}`;
+const pageData = graph.pages[pageId];
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -204,6 +210,13 @@ function formatDateRange(start: Date, end?: Date): string {
     )}
 
   </div>
+
+  <!-- Term graph panel (below main content to preserve full-width gallery layout) -->
+  {pageData && (
+    <div class="exh-narrow" style="margin-top: 0; padding-top: 0;">
+      <TermGraphPanel pageData={pageData} graph={graph} />
+    </div>
+  )}
 
   <!-- Lightbox overlay -->
   <div class="exh-lightbox" id="exh-lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="画像の拡大表示">

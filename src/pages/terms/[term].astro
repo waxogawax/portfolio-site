@@ -1,0 +1,261 @@
+---
+import { buildTermGraph } from '../../lib/termGraph.ts';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export async function getStaticPaths() {
+  const graph = await buildTermGraph();
+
+  // Only generate pages for terms with meaningful weight and ≥1 page.
+  // Also exclude terms containing spaces (URL-unsafe path segments) or slashes.
+  const MIN_WEIGHT = 3;
+  return graph.nodes
+    .filter(n =>
+      n.weight >= MIN_WEIGHT &&
+      n.pages.length >= 1 &&
+      n.id.length >= 2 &&
+      !n.id.includes(' ') &&
+      !n.id.includes('/') &&
+      !n.id.includes('\\')
+    )
+    .map(n => ({
+      params: { term: n.id },
+      props: { termId: n.id, termLabel: n.label, termPages: n.pages, graph },
+    }));
+}
+
+interface Props {
+  termId: string;
+  termLabel: string;
+  termPages: string[];
+  graph: import('../../lib/termGraph.ts').TermGraph;
+}
+
+const { termId, termLabel, termPages, graph } = Astro.props;
+
+// Find all pages that contain this term, with their term weight for this term
+type PageEntry = {
+  pageId: string;
+  title: string;
+  url: string;
+  collection: string;
+  date?: string;
+  termWeight: number;
+};
+
+const pages: PageEntry[] = termPages
+  .map(pageId => {
+    const p = graph.pages[pageId];
+    if (!p) return null;
+    const termData = p.terms.find(t => t.id === termId);
+    return {
+      pageId,
+      title: p.title,
+      url: p.url,
+      collection: p.collection,
+      date: p.date,
+      termWeight: termData?.weight ?? 0,
+    };
+  })
+  .filter((x): x is PageEntry => x !== null)
+  .sort((a, b) => b.termWeight - a.termWeight);
+
+// Co-occurring terms from the graph edges
+const coTerms = graph.edges
+  .filter(e => e.source === termId || e.target === termId)
+  .sort((a, b) => b.weight - a.weight)
+  .slice(0, 12)
+  .map(e => {
+    const otherId = e.source === termId ? e.target : e.source;
+    return { id: otherId, label: otherId, weight: e.weight };
+  });
+
+const collectionLabels: Record<string, string> = {
+  diary: 'Diary',
+  exhibitions: 'Exhibition',
+  works: 'Work',
+  writings: 'Writing',
+};
+
+function formatDate(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+---
+
+<BaseLayout
+  title={`${termLabel} — 語句の連関`}
+  description={`「${termLabel}」を含むページの一覧`}
+>
+  <div class="term-page container">
+
+    <div class="term-header">
+      <a href="javascript:history.back()" class="article-back">← 戻る</a>
+      <h1 class="term-title">{termLabel}</h1>
+      <p class="term-subtitle">この語句を含むページ</p>
+    </div>
+
+    <div class="term-body">
+
+      <!-- Pages containing this term -->
+      <section class="term-section">
+        {pages.length === 0 ? (
+          <p class="term-empty">ページが見つかりませんでした。</p>
+        ) : (
+          <ul class="term-page-list">
+            {pages.map(p => (
+              <li class="term-page-item">
+                <div class="term-page-meta">
+                  <span class="term-page-coll">{collectionLabels[p.collection] ?? p.collection}</span>
+                  {p.date && (
+                    <time class="term-page-date">{formatDate(p.date)}</time>
+                  )}
+                </div>
+                <a href={p.url} class="term-page-title">{p.title}</a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <!-- Co-occurring terms -->
+      {coTerms.length > 0 && (
+        <section class="term-section">
+          <h2 class="term-section-label">共起する語句</h2>
+          <ul class="term-coterms-list">
+            {coTerms.map(t => (
+              <li>
+                <a href={`/terms/${encodeURIComponent(t.id)}/`} class="term-coterm-link">
+                  {t.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+    </div>
+
+  </div>
+</BaseLayout>
+
+<style>
+  .term-page {
+    max-width: var(--width-article);
+  }
+
+  .term-header {
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 48px;
+  }
+
+  .term-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-top: 24px;
+    margin-bottom: 10px;
+  }
+
+  .term-subtitle {
+    font-size: 0.88rem;
+    color: var(--color-muted);
+  }
+
+  .term-body {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+  }
+
+  .term-section-label {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* Page list */
+  .term-page-list {
+    list-style: none;
+  }
+
+  .term-page-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-block: 16px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .term-page-item:first-child {
+    border-top: 1px solid var(--color-border);
+  }
+
+  .term-page-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .term-page-coll {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .term-page-date {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .term-page-title {
+    font-size: 1rem;
+    color: var(--color-text);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color var(--transition);
+  }
+
+  .term-page-title:hover {
+    text-decoration-color: var(--color-text);
+  }
+
+  .term-empty {
+    color: var(--color-muted);
+    font-size: 0.9rem;
+  }
+
+  /* Co-terms */
+  .term-coterms-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .term-coterm-link {
+    display: inline-block;
+    font-size: 0.82rem;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 3px 10px;
+    text-decoration: none;
+    transition: border-color var(--transition), background-color var(--transition);
+  }
+
+  .term-coterm-link:hover {
+    border-color: var(--color-text);
+    background-color: var(--color-hover-bg);
+  }
+</style>

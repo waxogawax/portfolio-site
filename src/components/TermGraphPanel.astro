@@ -1,0 +1,400 @@
+---
+import type { PageGraphData, TermGraph } from '../lib/termGraph.ts';
+
+interface Props {
+  pageData: PageGraphData | undefined;
+  graph: TermGraph;
+}
+
+const { pageData, graph } = Astro.props;
+
+// ── SVG network layout ────────────────────────────────────────────────────────
+const SVG_W = 260;
+const SVG_H = 176;
+const cx = SVG_W / 2;
+const cy = SVG_H / 2;
+const RADIUS = 66;
+const MAX_SVG = 6;
+
+const svgTerms = (pageData?.relatedTerms ?? []).slice(0, MAX_SVG);
+
+type SvgNode = {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  lx: number;
+  ly: number;
+  anchor: string;
+  url: string;
+};
+
+const svgNodes: SvgNode[] = svgTerms.map((t, i) => {
+  const angle = svgTerms.length > 0
+    ? (2 * Math.PI * i) / svgTerms.length - Math.PI / 2
+    : 0;
+  const x = cx + RADIUS * Math.cos(angle);
+  const y = cy + RADIUS * Math.sin(angle);
+
+  const dx = x - cx;
+  const dy = y - cy;
+  const EPS = 16;
+
+  let lx = x, ly = y, anchor = 'middle';
+  if (Math.abs(dx) < EPS) {
+    lx = x;
+    ly = dy < 0 ? y - 11 : y + 15;
+    anchor = 'middle';
+  } else if (dx > 0) {
+    lx = x + 10;
+    ly = y + 4;
+    anchor = 'start';
+  } else {
+    lx = x - 10;
+    ly = y + 4;
+    anchor = 'end';
+  }
+
+  const url = `/terms/${encodeURIComponent(t.id)}/`;
+  const label = t.label.length > 7 ? t.label.slice(0, 6) + '…' : t.label;
+  return { id: t.id, label, x, y, lx, ly, anchor, url };
+});
+
+// Edges between displayed terms that co-occur
+const svgIds = new Set(svgTerms.map(t => t.id));
+const svgEdges = graph.edges
+  .filter(e => svgIds.has(e.source) && svgIds.has(e.target))
+  .slice(0, 10);
+
+// Collection label helper
+const collectionLabels: Record<string, string> = {
+  diary: 'Diary',
+  exhibitions: 'Exhibition',
+  works: 'Work',
+  writings: 'Writing',
+};
+---
+
+{pageData && (
+  <aside class="tgp" id="term-graph-panel" aria-label="語句の連関パネル">
+    <div class="tgp-header">
+      <span class="tgp-title">語句の連関</span>
+      <button class="tgp-toggle" id="tgp-toggle" aria-expanded="true" aria-controls="tgp-body" title="折りたたむ">
+        ▾
+      </button>
+    </div>
+
+    <div class="tgp-body" id="tgp-body">
+
+      <!-- SVG network -->
+      {svgTerms.length > 0 && (
+        <div class="tgp-svg-wrap">
+          <svg
+            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            width="100%"
+            height={SVG_H}
+            role="img"
+            aria-label="語句の共起ネットワーク"
+          >
+            <!-- Inter-term co-occurrence edges -->
+            {svgEdges.map(e => {
+              const src = svgNodes.find(n => n.id === e.source);
+              const tgt = svgNodes.find(n => n.id === e.target);
+              return src && tgt ? (
+                <line
+                  x1={src.x} y1={src.y}
+                  x2={tgt.x} y2={tgt.y}
+                  stroke="var(--color-border)"
+                  stroke-width="1"
+                  stroke-dasharray="3 2"
+                  opacity="0.6"
+                />
+              ) : null;
+            })}
+
+            <!-- Hub edges (center → each term) -->
+            {svgNodes.map(n => (
+              <line
+                x1={cx} y1={cy}
+                x2={n.x} y2={n.y}
+                stroke="var(--color-border)"
+                stroke-width="1"
+                opacity="0.9"
+              />
+            ))}
+
+            <!-- Center node (current page) -->
+            <circle
+              cx={cx} cy={cy} r="6"
+              fill="var(--color-bg)"
+              stroke="var(--color-text)"
+              stroke-width="1.5"
+            />
+
+            <!-- Term nodes + labels -->
+            {svgNodes.map(n => (
+              <a href={n.url} class="svg-term-link">
+                <circle
+                  cx={n.x} cy={n.y} r="4"
+                  fill="var(--color-text)"
+                  opacity="0.65"
+                  class="svg-node"
+                />
+                <text
+                  x={n.lx} y={n.ly}
+                  text-anchor={n.anchor}
+                  font-size="8.5"
+                  font-family="var(--font-sans)"
+                  fill="var(--color-text)"
+                  class="svg-label"
+                >
+                  {n.label}
+                </text>
+              </a>
+            ))}
+          </svg>
+        </div>
+      )}
+
+      <!-- Related terms list -->
+      {pageData.relatedTerms.length > 0 && (
+        <div class="tgp-section">
+          <p class="tgp-section-label">関連語句</p>
+          <ul class="tgp-terms-list">
+            {pageData.relatedTerms.map(t => (
+              <li>
+                <a href={`/terms/${encodeURIComponent(t.id)}/`} class="tgp-link">
+                  {t.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <!-- Related pages list -->
+      {pageData.relatedPages.length > 0 && (
+        <div class="tgp-section">
+          <p class="tgp-section-label">関連ページ</p>
+          <ul class="tgp-pages-list">
+            {pageData.relatedPages.map(p => (
+              <li class="tgp-page-item">
+                <span class="tgp-page-coll">
+                  {collectionLabels[
+                    (graph.pages[
+                      Object.keys(graph.pages).find(k => graph.pages[k].url === p.url) ?? ''
+                    ]?.collection ?? '')] ?? ''}
+                </span>
+                <a href={p.url} class="tgp-link tgp-page-link">
+                  {p.title}
+                </a>
+                {p.reasonTerms.length > 0 && (
+                  <span class="tgp-page-reason">
+                    {p.reasonTerms.slice(0, 3).join('・')}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+    </div>
+  </aside>
+)}
+
+<style>
+  .tgp {
+    border: 1px solid var(--color-border);
+    font-size: 0.82rem;
+    font-family: var(--font-sans);
+    position: sticky;
+    top: calc(60px + 24px); /* below sticky header */
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .tgp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    background: var(--color-bg);
+    z-index: 1;
+  }
+
+  .tgp-title {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .tgp-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-muted);
+    font-size: 0.9rem;
+    padding: 2px 4px;
+    line-height: 1;
+    transition: color var(--transition), transform 0.15s ease;
+  }
+
+  .tgp-toggle:hover {
+    color: var(--color-text);
+  }
+
+  .tgp.is-collapsed .tgp-toggle {
+    transform: rotate(-90deg);
+  }
+
+  .tgp-body {
+    overflow: hidden;
+  }
+
+  .tgp.is-collapsed .tgp-body {
+    display: none;
+  }
+
+  /* ── SVG ── */
+  .tgp-svg-wrap {
+    padding: 6px 4px 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .svg-term-link {
+    cursor: pointer;
+  }
+
+  .svg-node {
+    transition: opacity 0.15s ease;
+  }
+
+  .svg-term-link:hover .svg-node {
+    opacity: 1;
+  }
+
+  .svg-label {
+    text-decoration: none;
+    transition: opacity 0.15s ease;
+  }
+
+  .svg-term-link:hover .svg-label {
+    text-decoration: underline;
+    text-decoration-color: var(--color-text);
+  }
+
+  /* ── Sections ── */
+  .tgp-section {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .tgp-section:last-child {
+    border-bottom: none;
+  }
+
+  .tgp-section-label {
+    font-size: 0.62rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── Term links ── */
+  .tgp-terms-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+
+  .tgp-terms-list li::after {
+    content: '·';
+    color: var(--color-border);
+    margin-left: 8px;
+  }
+
+  .tgp-terms-list li:last-child::after {
+    content: '';
+  }
+
+  .tgp-link {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-underline-offset: 2px;
+    transition: text-decoration-color var(--transition);
+  }
+
+  .tgp-link:hover {
+    text-decoration-color: var(--color-text);
+  }
+
+  .tgp-link:visited {
+    color: var(--color-muted);
+  }
+
+  /* ── Related pages ── */
+  .tgp-pages-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .tgp-page-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .tgp-page-coll {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+  }
+
+  .tgp-page-link {
+    font-size: 0.84rem;
+    font-weight: 400;
+    line-height: 1.35;
+  }
+
+  .tgp-page-reason {
+    font-size: 0.7rem;
+    color: var(--color-muted);
+    line-height: 1.4;
+  }
+
+  /* ── Mobile: display below content ── */
+  @media (max-width: 960px) {
+    .tgp {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
+      margin-top: 48px;
+    }
+  }
+</style>
+
+<script>
+  const panel = document.getElementById('term-graph-panel');
+  const toggle = document.getElementById('tgp-toggle');
+
+  if (panel && toggle) {
+    toggle.addEventListener('click', () => {
+      const collapsed = panel.classList.toggle('is-collapsed');
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+  }
+</script>
