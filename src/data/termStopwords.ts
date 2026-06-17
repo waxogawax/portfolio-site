@@ -37,6 +37,12 @@ export const STOPWORDS = new Set<string>([
   'サンプル', 'テスト', 'エントリ', 'ワーク',
   // Locations used as tags (too generic for cross-page linking)
   'tokyo', 'japan', 'osaka', 'kyoto',
+  // Academic publishing / bibliography noise
+  'les', 'presses', 'reel', 'du', 'de', 'la', 'le', 'koenig', 'verso', 'press',
+  'mit', 'cahier', 'trans', 'vol', 'pp', 'ibid', 'op', 'cit', 'eds', 'ed',
+  'books', 'october', 'open', 'flow', 'power',
+  // Generic English academic terms (too broad to be useful cross-links)
+  'contemporary', 'aesthetics', 'relational', 'radical', 'antagonism', 'participation',
   // English stopwords
   'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of',
   'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'be', 'been',
