@@ -79,8 +79,8 @@ function formatDateRange(start: Date, end?: Date): string {
 
   <!-- 3. Cover image -->
   {d.cover && (
-    <div class="exh-cover">
-      <img src={d.cover} alt={`${d.title} — cover`} />
+    <div class="exh-cover exh-img-wrap">
+      <img src={d.cover} alt={`${d.title} — cover`} class="exh-img" />
     </div>
   )}
 
@@ -108,8 +108,8 @@ function formatDateRange(start: Date, end?: Date): string {
       <p class="exh-section-label">Images</p>
       <div class="exh-gallery-grid">
         {d.images.map((img) => (
-          <figure class="exh-gallery-item">
-            <img src={img.src} alt={img.alt ?? img.caption ?? d.title} loading="lazy" />
+          <figure class="exh-gallery-item exh-img-wrap">
+            <img src={img.src} alt={img.alt ?? img.caption ?? d.title} loading="lazy" class="exh-img" />
             {img.caption && (
               <figcaption class="exh-gallery-caption">{img.caption}</figcaption>
             )}
@@ -226,6 +226,50 @@ function formatDateRange(start: Date, end?: Date): string {
 </BaseLayout>
 
 <style>
+  /* Image loading shimmer */
+  .exh-img-wrap {
+    position: relative;
+    background-color: var(--color-hover-bg, #f0f0f0);
+    overflow: hidden;
+  }
+
+  .exh-img-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: exh-shimmer 1.4s ease-in-out infinite;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .exh-img-wrap.is-loaded::after {
+    opacity: 0;
+    animation: none;
+  }
+
+  @keyframes exh-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .exh-img {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    display: block;
+    width: 100%;
+  }
+
+  .exh-img-wrap.is-loaded .exh-img {
+    opacity: 1;
+  }
+
   .exh-gallery-item img {
     cursor: zoom-in;
   }
@@ -283,5 +327,17 @@ function formatDateRange(start: Date, end?: Date): string {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeLightbox();
+  });
+
+  // Image loading shimmer
+  document.querySelectorAll<HTMLImageElement>('.exh-img-wrap .exh-img').forEach(img => {
+    const wrap = img.closest<HTMLElement>('.exh-img-wrap');
+    if (!wrap) return;
+    if (img.complete && img.naturalWidth > 0) {
+      wrap.classList.add('is-loaded');
+    } else {
+      img.addEventListener('load', () => wrap.classList.add('is-loaded'));
+      img.addEventListener('error', () => wrap.classList.add('is-loaded'));
+    }
   });
 </script>
