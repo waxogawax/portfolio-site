@@ -12,12 +12,11 @@
     width: min(40vw, 580px);
     height: 72vh;
     z-index: 10;
-    opacity: 0.82;
+    opacity: 0.85;
     mix-blend-mode: multiply;
     pointer-events: none;
     user-select: none;
     will-change: transform;
-    color: var(--color-text);
   }
 
   #network-svg {
@@ -25,30 +24,6 @@
     height: 100%;
     overflow: visible;
   }
-
-  .net-link {
-    stroke: var(--color-text);
-    fill: none;
-    stroke-width: 0.6;
-    opacity: 0.22;
-    pointer-events: none;
-  }
-
-  .net-node {
-    fill: var(--color-text);
-    font-family: inherit;
-    letter-spacing: 0.04em;
-    text-anchor: middle;
-    pointer-events: auto;
-    cursor: grab;
-  }
-  .net-node:active { cursor: grabbing; }
-
-  .net-node.l0 { font-size: 13px;   opacity: 0.90; }
-  .net-node.l1 { font-size: 10.5px; opacity: 0.68; }
-  .net-node.l2 { font-size: 8.5px;  opacity: 0.46; }
-
-  .net-node .ja { font-size: 0.93em; }
 
   @media (prefers-color-scheme: dark) {
     #floating-network {
@@ -70,33 +45,39 @@
 </style>
 
 <script>
+// All SVG element styles are set directly in JS to bypass Astro's scoped CSS.
+
+const BLUE = "#0000ff";
+
+const LAYER = {
+  fontSize:  ["13px",   "10.5px", "8.5px"],
+  opacity:   [0.90,     0.68,     0.46],
+};
+
 const TERMS = [
-  // Layer 0 — core
-  { id: "curation",     label: ["curation",          "キュレーション"],        layer: 0 },
-  { id: "anthropology", label: ["anthropology",       "人類学"],               layer: 0 },
-  { id: "care",         label: ["care",               "ケア"],                  layer: 0 },
-  { id: "exhibition",   label: ["exhibition space",   "展示空間"],              layer: 0 },
-  { id: "conversion",   label: ["conditions of conv.","変換条件"],              layer: 0 },
-  // Layer 1 — body & language
-  { id: "cochlear",     label: ["cochlear implant",   "人工内耳"],              layer: 1 },
-  { id: "voice",        label: ["voice",              "声"],                    layer: 1 },
-  { id: "silence",      label: ["silence",            "沈黙"],                  layer: 1 },
-  { id: "translation",  label: ["translation",        "翻訳"],                  layer: 1 },
-  { id: "caption",      label: ["caption",            "キャプション"],          layer: 1 },
-  { id: "text",         label: ["text",               "テクスト"],              layer: 1 },
-  { id: "body",         label: ["body",               "身体"],                  layer: 1 },
-  // Layer 2 — history, institution, imagination
-  { id: "eastasia",     label: ["East Asia",          "東アジア"],              layer: 2 },
-  { id: "death",        label: ["death",              "死"],                    layer: 2 },
-  { id: "online",       label: ["online space",       "オンライン空間"],        layer: 2 },
-  { id: "christianity", label: ["Christian paradigm", "キリスト教的範例性"],    layer: 2 },
-  { id: "market",       label: ["market economy",     "市場経済"],              layer: 2 },
-  { id: "institution",  label: ["institution",        "制度"],                  layer: 2 },
-  { id: "memory",       label: ["memory",             "記憶"],                  layer: 2 },
-  { id: "imagination",  label: ["imagination",        "想像力"],                layer: 2 },
-  { id: "fiction",      label: ["make-believe",       "フィクション"],          layer: 2 },
-  { id: "poetics",      label: ["poetics",            "詩学"],                  layer: 2 },
-  { id: "accessibility",label: ["accessibility",      "アクセシビリティ"],      layer: 2 },
+  { id: "curation",     label: ["curation",          "キュレーション"],     layer: 0 },
+  { id: "anthropology", label: ["anthropology",       "人類学"],            layer: 0 },
+  { id: "care",         label: ["care",               "ケア"],               layer: 0 },
+  { id: "exhibition",   label: ["exhibition space",   "展示空間"],           layer: 0 },
+  { id: "conversion",   label: ["conditions of conv.","変換条件"],           layer: 0 },
+  { id: "cochlear",     label: ["cochlear implant",   "人工内耳"],           layer: 1 },
+  { id: "voice",        label: ["voice",              "声"],                 layer: 1 },
+  { id: "silence",      label: ["silence",            "沈黙"],               layer: 1 },
+  { id: "translation",  label: ["translation",        "翻訳"],               layer: 1 },
+  { id: "caption",      label: ["caption",            "キャプション"],       layer: 1 },
+  { id: "text",         label: ["text",               "テクスト"],           layer: 1 },
+  { id: "body",         label: ["body",               "身体"],               layer: 1 },
+  { id: "eastasia",     label: ["East Asia",          "東アジア"],           layer: 2 },
+  { id: "death",        label: ["death",              "死"],                 layer: 2 },
+  { id: "online",       label: ["online space",       "オンライン空間"],     layer: 2 },
+  { id: "christianity", label: ["Christian paradigm", "キリスト教的範例性"], layer: 2 },
+  { id: "market",       label: ["market economy",     "市場経済"],           layer: 2 },
+  { id: "institution",  label: ["institution",        "制度"],               layer: 2 },
+  { id: "memory",       label: ["memory",             "記憶"],               layer: 2 },
+  { id: "imagination",  label: ["imagination",        "想像力"],             layer: 2 },
+  { id: "fiction",      label: ["make-believe",       "フィクション"],       layer: 2 },
+  { id: "poetics",      label: ["poetics",            "詩学"],               layer: 2 },
+  { id: "accessibility",label: ["accessibility",      "アクセシビリティ"],   layer: 2 },
 ];
 
 const LINKS = [
@@ -133,34 +114,33 @@ const svg = document.getElementById("network-svg");
 const container = document.getElementById("floating-network");
 
 if (svg && container) {
-  const pos = {};     // { id: { bx, by, px, py, ax, ay, sx, sy } }
-  const cur = {};     // { id: { x, y } } current animated position
-  const nodeEls = {}; // { id: SVGTextElement }
-  const lineEls = {}; // { "src-tgt": SVGLineElement }
+  const pos = {};
+  const cur = {};
+  const nodeEls = {};
+  const lineEls = {};
   let rafId = 0;
   let startTime = 0;
   let W = 0, H = 0;
 
-  // Per-node drag state
   let draggingId = null;
   let dragOffsetX = 0, dragOffsetY = 0;
 
-  function rnd(min, max) {
-    return Math.random() * (max - min) + min;
-  }
+  function rnd(min, max) { return Math.random() * (max - min) + min; }
 
   function svgCoords(clientX, clientY) {
     const rect = svg.getBoundingClientRect();
-    const scaleX = W / rect.width;
-    const scaleY = H / rect.height;
     return {
-      x: (clientX - rect.left) * scaleX,
-      y: (clientY - rect.top) * scaleY,
+      x: (clientX - rect.left) * (W / (rect.width  || W)),
+      y: (clientY - rect.top)  * (H / (rect.height || H)),
     };
   }
 
+  function mkEl(tag) {
+    return document.createElementNS("http://www.w3.org/2000/svg", tag);
+  }
+
   function build() {
-    W = container.clientWidth || 400;
+    W = container.clientWidth  || 400;
     H = container.clientHeight || 500;
 
     svg.innerHTML = "";
@@ -197,40 +177,51 @@ if (svg && container) {
       });
     });
 
-    // Lines (rendered first, appear behind text)
+    // Lines — all styles set directly (Astro scoped CSS doesn't reach dynamic elements)
     LINKS.forEach(([src, tgt]) => {
       const ps = pos[src], pt = pos[tgt];
       if (!ps || !pt) return;
-      const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      const el = mkEl("line");
       el.setAttribute("x1", ps.bx);
       el.setAttribute("y1", ps.by);
       el.setAttribute("x2", pt.bx);
       el.setAttribute("y2", pt.by);
-      el.setAttribute("class", "net-link");
+      el.setAttribute("stroke", BLUE);
+      el.setAttribute("fill", "none");
+      el.setAttribute("stroke-width", "0.7");
+      el.setAttribute("opacity", "0.28");
+      el.style.pointerEvents = "none";
       svg.appendChild(el);
       lineEls[`${src}-${tgt}`] = el;
     });
 
-    // Text nodes
+    // Text nodes — all styles set directly
     TERMS.forEach(t => {
       const p = pos[t.id];
       const [en, ja] = t.label;
-      const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+
+      const textEl = mkEl("text");
       textEl.setAttribute("x", p.bx);
       textEl.setAttribute("y", p.by);
-      textEl.setAttribute("class", `net-node l${t.layer}`);
+      textEl.setAttribute("fill", BLUE);
+      textEl.setAttribute("opacity", String(LAYER.opacity[t.layer]));
+      textEl.setAttribute("font-size", LAYER.fontSize[t.layer]);
+      textEl.setAttribute("font-family", "inherit");
+      textEl.setAttribute("letter-spacing", "0.04em");
+      textEl.setAttribute("text-anchor", "middle");
+      textEl.style.pointerEvents = "auto";
+      textEl.style.cursor = "grab";
       textEl.dataset.termId = t.id;
 
-      const sp1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      const sp1 = mkEl("tspan");
       sp1.setAttribute("x", p.bx);
       sp1.setAttribute("dy", "-0.65em");
-      sp1.setAttribute("class", "en");
       sp1.textContent = en;
 
-      const sp2 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      const sp2 = mkEl("tspan");
       sp2.setAttribute("x", p.bx);
       sp2.setAttribute("dy", "1.35em");
-      sp2.setAttribute("class", "ja");
+      sp2.setAttribute("font-size", "0.93em");
       sp2.textContent = ja;
 
       textEl.appendChild(sp1);
@@ -255,7 +246,6 @@ if (svg && container) {
 
       let x, y;
       if (t.id === draggingId) {
-        // Position already updated by pointermove; use bx/by directly
         x = p.bx;
         y = p.by;
       } else {
@@ -285,12 +275,14 @@ if (svg && container) {
 
   // Per-node drag
   document.addEventListener("pointerdown", e => {
-    const textEl = e.target.closest(".net-node");
-    if (!textEl) return;
-    const id = textEl.dataset.termId;
+    const textEl = e.target.closest
+      ? e.target.closest("[data-term-id]")
+      : null;
+    const id = textEl && textEl.dataset && textEl.dataset.termId;
     if (!id || !cur[id]) return;
 
     draggingId = id;
+    textEl.style.cursor = "grabbing";
     const { x, y } = svgCoords(e.clientX, e.clientY);
     dragOffsetX = x - cur[id].x;
     dragOffsetY = y - cur[id].y;
@@ -306,14 +298,13 @@ if (svg && container) {
 
   document.addEventListener("pointerup", () => {
     if (draggingId) {
-      // Fix new base position so animation resumes from here
+      if (nodeEls[draggingId]) nodeEls[draggingId].style.cursor = "grab";
       pos[draggingId].bx = cur[draggingId].x;
       pos[draggingId].by = cur[draggingId].y;
       draggingId = null;
     }
   });
 
-  // Wait for layout before reading dimensions
   function waitAndBuild() {
     if (container.clientWidth === 0) {
       requestAnimationFrame(waitAndBuild);
