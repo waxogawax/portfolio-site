@@ -1,0 +1,307 @@
+---
+---
+<div id="floating-network" aria-hidden="true">
+  <svg id="network-svg" aria-hidden="true"></svg>
+</div>
+
+<style>
+  #floating-network {
+    position: fixed;
+    top: 10vh;
+    right: 3vw;
+    width: min(40vw, 580px);
+    height: 72vh;
+    z-index: 10;
+    opacity: 0.72;
+    mix-blend-mode: multiply;
+    pointer-events: none;
+    user-select: none;
+    will-change: transform;
+  }
+
+  #network-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .net-link {
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 0.5;
+    opacity: 0.13;
+    pointer-events: none;
+  }
+
+  .net-node {
+    fill: currentColor;
+    font-family: inherit;
+    letter-spacing: 0.04em;
+    text-anchor: middle;
+    pointer-events: auto;
+    cursor: grab;
+  }
+  .net-node:active { cursor: grabbing; }
+
+  .net-node.l0 { font-size: 13px;   opacity: 0.86; }
+  .net-node.l1 { font-size: 10.5px; opacity: 0.60; }
+  .net-node.l2 { font-size: 8.5px;  opacity: 0.38; }
+
+  .net-node .ja { font-size: 0.93em; }
+
+  @media (prefers-color-scheme: dark) {
+    #floating-network {
+      mix-blend-mode: screen;
+      opacity: 0.48;
+    }
+  }
+
+  @media (max-width: 900px) {
+    #floating-network {
+      position: static;
+      width: 100%;
+      height: 220px;
+      opacity: 0.55;
+      margin-bottom: 2.5rem;
+      mix-blend-mode: normal;
+    }
+  }
+</style>
+
+<script>
+const TERMS = [
+  // Layer 0 — core
+  { id: "curation",     label: ["curation",          "キュレーション"],        layer: 0 },
+  { id: "anthropology", label: ["anthropology",       "人類学"],               layer: 0 },
+  { id: "care",         label: ["care",               "ケア"],                  layer: 0 },
+  { id: "exhibition",   label: ["exhibition space",   "展示空間"],              layer: 0 },
+  { id: "conversion",   label: ["conditions of conv.","変換条件"],              layer: 0 },
+  // Layer 1 — body & language
+  { id: "cochlear",     label: ["cochlear implant",   "人工内耳"],              layer: 1 },
+  { id: "voice",        label: ["voice",              "声"],                    layer: 1 },
+  { id: "silence",      label: ["silence",            "沈黙"],                  layer: 1 },
+  { id: "translation",  label: ["translation",        "翻訳"],                  layer: 1 },
+  { id: "caption",      label: ["caption",            "キャプション"],          layer: 1 },
+  { id: "text",         label: ["text",               "テクスト"],              layer: 1 },
+  { id: "body",         label: ["body",               "身体"],                  layer: 1 },
+  // Layer 2 — history, institution, imagination
+  { id: "eastasia",     label: ["East Asia",          "東アジア"],              layer: 2 },
+  { id: "death",        label: ["death",              "死"],                    layer: 2 },
+  { id: "online",       label: ["online space",       "オンライン空間"],        layer: 2 },
+  { id: "christianity", label: ["Christian paradigm", "キリスト教的範例性"],    layer: 2 },
+  { id: "market",       label: ["market economy",     "市場経済"],              layer: 2 },
+  { id: "institution",  label: ["institution",        "制度"],                  layer: 2 },
+  { id: "memory",       label: ["memory",             "記憶"],                  layer: 2 },
+  { id: "imagination",  label: ["imagination",        "想像力"],                layer: 2 },
+  { id: "fiction",      label: ["make-believe",       "フィクション"],          layer: 2 },
+  { id: "poetics",      label: ["poetics",            "詩学"],                  layer: 2 },
+  { id: "accessibility",label: ["accessibility",      "アクセシビリティ"],      layer: 2 },
+];
+
+const LINKS = [
+  ["curation",    "exhibition"],
+  ["curation",    "conversion"],
+  ["curation",    "institution"],
+  ["curation",    "memory"],
+  ["curation",    "imagination"],
+  ["anthropology","translation"],
+  ["anthropology","eastasia"],
+  ["anthropology","poetics"],
+  ["care",        "body"],
+  ["care",        "accessibility"],
+  ["care",        "cochlear"],
+  ["translation", "caption"],
+  ["translation", "silence"],
+  ["translation", "cochlear"],
+  ["caption",     "exhibition"],
+  ["voice",       "silence"],
+  ["voice",       "text"],
+  ["text",        "fiction"],
+  ["fiction",     "imagination"],
+  ["death",       "online"],
+  ["christianity","market"],
+  ["conversion",  "institution"],
+  ["conversion",  "accessibility"],
+  ["body",        "cochlear"],
+  ["memory",      "exhibition"],
+  ["institution", "market"],
+  ["poetics",     "fiction"],
+];
+
+const svg = document.getElementById("network-svg");
+const container = document.getElementById("floating-network");
+
+if (svg && container) {
+  const pos = {};     // { id: { bx, by, px, py, ax, ay, sx, sy } }
+  const cur = {};     // { id: { x, y } } current animated position
+  const nodeEls = {}; // { id: SVGTextElement }
+  const lineEls = {}; // { "src-tgt": SVGLineElement }
+  let rafId = 0;
+  let startTime = 0;
+  let W = 0, H = 0;
+
+  function rnd(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  function build() {
+    W = container.clientWidth || 400;
+    H = container.clientHeight || 500;
+
+    svg.innerHTML = "";
+    for (const k in nodeEls) delete nodeEls[k];
+    for (const k in lineEls) delete lineEls[k];
+    for (const k in pos)     delete pos[k];
+    for (const k in cur)     delete cur[k];
+
+    const cx = W / 2, cy = H / 2;
+    const byLayer = [[], [], []];
+    TERMS.forEach(t => byLayer[t.layer].push(t));
+
+    const rings = [
+      { rx: W * 0.20, ry: H * 0.17 },
+      { rx: W * 0.37, ry: H * 0.33 },
+      { rx: W * 0.48, ry: H * 0.46 },
+    ];
+
+    byLayer.forEach((nodes, li) => {
+      const { rx, ry } = rings[li];
+      nodes.forEach((t, i) => {
+        const angle = (Math.PI * 2 * i / nodes.length) + rnd(-0.28, 0.28);
+        pos[t.id] = {
+          bx: cx + Math.cos(angle) * rx * rnd(0.82, 1.18),
+          by: cy + Math.sin(angle) * ry * rnd(0.82, 1.18),
+          px: rnd(0, Math.PI * 2),
+          py: rnd(0, Math.PI * 2),
+          ax: rnd(1.5, 3.5),
+          ay: rnd(1.5, 3.5),
+          sx: rnd(0.00010, 0.00025),
+          sy: rnd(0.00010, 0.00025),
+        };
+        cur[t.id] = { x: pos[t.id].bx, y: pos[t.id].by };
+      });
+    });
+
+    // Lines (rendered first, appear behind text)
+    LINKS.forEach(([src, tgt]) => {
+      const ps = pos[src], pt = pos[tgt];
+      if (!ps || !pt) return;
+      const el = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      el.setAttribute("x1", ps.bx);
+      el.setAttribute("y1", ps.by);
+      el.setAttribute("x2", pt.bx);
+      el.setAttribute("y2", pt.by);
+      el.setAttribute("class", "net-link");
+      svg.appendChild(el);
+      lineEls[`${src}-${tgt}`] = el;
+    });
+
+    // Text nodes
+    TERMS.forEach(t => {
+      const p = pos[t.id];
+      const [en, ja] = t.label;
+      const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      textEl.setAttribute("x", p.bx);
+      textEl.setAttribute("y", p.by);
+      textEl.setAttribute("class", `net-node l${t.layer}`);
+
+      const sp1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      sp1.setAttribute("x", p.bx);
+      sp1.setAttribute("dy", "-0.65em");
+      sp1.setAttribute("class", "en");
+      sp1.textContent = en;
+
+      const sp2 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+      sp2.setAttribute("x", p.bx);
+      sp2.setAttribute("dy", "1.35em");
+      sp2.setAttribute("class", "ja");
+      sp2.textContent = ja;
+
+      textEl.appendChild(sp1);
+      textEl.appendChild(sp2);
+      svg.appendChild(textEl);
+      nodeEls[t.id] = textEl;
+    });
+
+    cancelAnimationFrame(rafId);
+    startTime = 0;
+    rafId = requestAnimationFrame(animate);
+  }
+
+  function animate(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+
+    TERMS.forEach(t => {
+      const p = pos[t.id];
+      const el = nodeEls[t.id];
+      if (!p || !el) return;
+
+      const x = p.bx + Math.sin(elapsed * p.sx + p.px) * p.ax;
+      const y = p.by + Math.cos(elapsed * p.sy + p.py) * p.ay;
+      cur[t.id] = { x, y };
+
+      el.setAttribute("x", x);
+      el.setAttribute("y", y);
+      el.querySelectorAll("tspan").forEach(sp => sp.setAttribute("x", x));
+    });
+
+    LINKS.forEach(([src, tgt]) => {
+      const ps = cur[src], pt = cur[tgt];
+      const el = lineEls[`${src}-${tgt}`];
+      if (ps && pt && el) {
+        el.setAttribute("x1", ps.x);
+        el.setAttribute("y1", ps.y);
+        el.setAttribute("x2", pt.x);
+        el.setAttribute("y2", pt.y);
+      }
+    });
+
+    rafId = requestAnimationFrame(animate);
+  }
+
+  // Drag: clicking any node drags the entire network
+  let dragging = false;
+  let dragStartX = 0, dragStartY = 0;
+  let offsetX = 0, offsetY = 0;
+
+  document.addEventListener("pointerdown", e => {
+    if (!e.target.closest(".net-node")) return;
+    dragging = true;
+    dragStartX = e.clientX - offsetX;
+    dragStartY = e.clientY - offsetY;
+    e.preventDefault();
+  });
+
+  document.addEventListener("pointermove", e => {
+    if (!dragging) return;
+    offsetX = e.clientX - dragStartX;
+    offsetY = e.clientY - dragStartY;
+    container.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+  });
+
+  document.addEventListener("pointerup", () => {
+    dragging = false;
+  });
+
+  // Wait for layout before reading dimensions
+  function waitAndBuild() {
+    if (container.clientWidth === 0) {
+      requestAnimationFrame(waitAndBuild);
+      return;
+    }
+    build();
+  }
+  requestAnimationFrame(waitAndBuild);
+
+  let resizeTimer = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      offsetX = 0; offsetY = 0;
+      container.style.transform = "";
+      build();
+    }, 200);
+  });
+}
+</script>
