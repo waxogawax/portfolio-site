@@ -84,22 +84,14 @@
     }
 
     // ── Dual-pulse activations ────────────────────────────────────────────────
-    //
-    // Each activation carries:
-    //   inner pulse  — short-range, bright, fast (INNER_LIFE ms)
-    //   outer pulse  — long-range, faint, slow;
-    //                  grows continuously while hovering,
-    //                  then fades from its frozen radius (OUTER_LIFE ms)
-    //
-    const INNER_LIFE  = 950;   // ms
-    const OUTER_LIFE  = 3800;  // ms (fade after hover ends)
-    const OUTER_GROW  = 0.105; // canvas-W per second during hover
-    const OUTER_MAX   = 0.46;  // canvas-W cap
-    const OUTER_START = 0.06;  // canvas-W at hover start
+    const INNER_LIFE  = 950;
+    const OUTER_LIFE  = 3800;
+    const OUTER_GROW  = 0.105;
+    const OUTER_MAX   = 0.46;
+    const OUTER_START = 0.06;
 
-    // activations: { x, y, born, hoverStart, hoverEnded, outerFadeR }
     let activations = [];
-    const hoverMap  = new Map(); // el → activation
+    const hoverMap  = new Map();
 
     function outerRAt(hoverMs) {
       const W = canvas.width;
@@ -107,13 +99,11 @@
     }
 
     function addActivation(el, nx, ny) {
-      // Close previous activation for this element
       const prev = hoverMap.get(el);
       if (prev && prev.hoverEnded === null) {
         prev.hoverEnded = performance.now();
         prev.outerFadeR = outerRAt(prev.hoverEnded - prev.hoverStart);
       }
-
       const a = {
         x:          nx,
         y:          ny,
@@ -124,8 +114,6 @@
       };
       activations.push(a);
       hoverMap.set(el, a);
-
-      // Evict oldest if too many
       if (activations.length > 10) activations.shift();
     }
 
@@ -138,12 +126,30 @@
       }
     }
 
+    // ── Scan wave constants ───────────────────────────────────────────────────
+    const SCAN_WIDTH      = 0.18;  // normalized height of the scan band
+    const SCAN_ALPHA_PEAK = 0.020; // max alpha of the scan wave itself
+    const SCAN_PART_BASE  = 0.055; // base particle halo alpha (was 0.065, now softer)
+    const SCAN_PART_BOOST = 0.032; // extra alpha at scan-wave center
+    const SCAN_OUT_BOOST  = 0.018; // outer pulse alpha boost at scan center
+
     // ── Draw ─────────────────────────────────────────────────────────────────
     function draw(now) {
       const W = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      // Background wash
+      // Scan wave position (normalized 0-1).
+      // On mobile / reduced-motion: park it off-screen so boost is always 0.
+      const scanY = (prefersReduced || isMobile)
+        ? -2
+        : 0.08 + ((now * 0.000035) % 0.84);
+
+      // Boost factor for a given normalised y coordinate
+      function boost(ny) {
+        return Math.max(0, 1 - Math.abs(ny - scanY) / SCAN_WIDTH);
+      }
+
+      // Background field wash
       const fieldGrd = ctx.createLinearGradient(0, H * 0.05, 0, H * 0.95);
       fieldGrd.addColorStop(0,    'rgba(255,255,0,0)');
       fieldGrd.addColorStop(0.10, 'rgba(255,255,0,0.014)');
@@ -153,31 +159,45 @@
       ctx.fillStyle = fieldGrd;
       ctx.fillRect(0, 0, W, H);
 
-      // Particle halos
-      for (const p of pts) {
-        const px     = p.x * W, py = p.y * H;
-        const pulse  = 0.88 + 0.12 * Math.sin(p.phase);
-        const outerR = p.r * W * pulse;
-        const alpha  = p.conc * 0.065;
+      // Scan wave band — drawn after field wash, under particle halos.
+      // Very faint bell-shaped gradient centred on scanY.
+      if (!prefersReduced && !isMobile) {
+        const bandH   = SCAN_WIDTH * H;
+        const scanYpx = scanY * H;
+        const sg = ctx.createLinearGradient(0, scanYpx - bandH, 0, scanYpx + bandH);
+        sg.addColorStop(0,   'rgba(255,255,0,0)');
+        sg.addColorStop(0.5, `rgba(255,255,0,${SCAN_ALPHA_PEAK})`);
+        sg.addColorStop(1,   'rgba(255,255,0,0)');
+        ctx.fillStyle = sg;
+        ctx.fillRect(0, Math.max(0, scanYpx - bandH), W, Math.min(H, bandH * 2));
+      }
 
-        const og = ctx.createRadialGradient(px, py, 0, px, py, outerR);
+      // Particle halos — alpha slightly lifted near the scan wave
+      for (const p of pts) {
+        const px    = p.x * W, py = p.y * H;
+        const pulse = 0.88 + 0.12 * Math.sin(p.phase);
+        const oR    = p.r * W * pulse;
+        const b     = boost(p.y);
+        const alpha = p.conc * (SCAN_PART_BASE + b * SCAN_PART_BOOST);
+
+        const og = ctx.createRadialGradient(px, py, 0, px, py, oR);
         og.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
         og.addColorStop(0.40, `rgba(255,255,0,${(alpha * 0.30).toFixed(4)})`);
         og.addColorStop(1,    'rgba(255,255,0,0)');
         ctx.fillStyle = og;
         ctx.beginPath();
-        ctx.arc(px, py, outerR, 0, Math.PI * 2);
+        ctx.arc(px, py, oR, 0, Math.PI * 2);
         ctx.fill();
 
         if (p.conc > 0.28) {
-          const innerR = p.r * W * 0.28 * pulse;
-          const ia     = (p.conc - 0.28) * 0.09;
-          const ig = ctx.createRadialGradient(px, py, 0, px, py, innerR);
+          const iR = p.r * W * 0.28 * pulse;
+          const ia = (p.conc - 0.28) * 0.09;
+          const ig = ctx.createRadialGradient(px, py, 0, px, py, iR);
           ig.addColorStop(0, `rgba(255,255,0,${ia.toFixed(4)})`);
           ig.addColorStop(1, 'rgba(255,255,0,0)');
           ctx.fillStyle = ig;
           ctx.beginPath();
-          ctx.arc(px, py, innerR, 0, Math.PI * 2);
+          ctx.arc(px, py, iR, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -185,17 +205,18 @@
       // Dual-pulse activations
       const nextActs = [];
       for (const a of activations) {
-        const px = a.x * W, py = a.y * H;
+        const px  = a.x * W, py = a.y * H;
+        const b   = boost(a.y);   // scan proximity at this activation's position
         let innerAlive = false;
         let outerAlive = false;
 
-        // Inner pulse: short-range, bright, fast
+        // Inner pulse: short-range, bright, fast — scan does not amplify
         const innerT = (now - a.born) / INNER_LIFE;
         if (innerT < 1.0) {
-          innerAlive    = true;
-          const fade    = 0.5 * (1 + Math.cos(Math.PI * innerT));
-          const iR      = W * (0.040 + innerT * 0.052); // compact expansion
-          const alpha   = fade * 0.40;
+          innerAlive  = true;
+          const fade  = 0.5 * (1 + Math.cos(Math.PI * innerT));
+          const iR    = W * (0.040 + innerT * 0.052);
+          const alpha = fade * 0.40;
 
           const ig = ctx.createRadialGradient(px, py, 0, px, py, iR);
           ig.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
@@ -207,12 +228,11 @@
           ctx.fill();
         }
 
-        // Outer pulse: long-range, faint, slow
+        // Outer pulse: long-range, faint — slightly amplified by scan wave
         if (a.hoverEnded === null) {
-          // Cursor still on element — keep growing
           outerAlive  = true;
           const oR    = outerRAt(now - a.hoverStart);
-          const alpha = 0.078;
+          const alpha = 0.078 + b * SCAN_OUT_BOOST;
 
           const og = ctx.createRadialGradient(px, py, 0, px, py, oR);
           og.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
@@ -224,13 +244,12 @@
           ctx.arc(px, py, oR, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          // Cursor left — fade from frozen radius, slight continued expansion
           const outerT = (now - a.hoverEnded) / OUTER_LIFE;
           if (outerT < 1.0) {
             outerAlive  = true;
             const fade  = 0.5 * (1 + Math.cos(Math.PI * outerT));
-            const oR    = a.outerFadeR * (1 + outerT * 0.14); // gentle continued drift
-            const alpha = fade * 0.068;
+            const oR    = a.outerFadeR * (1 + outerT * 0.14);
+            const alpha = fade * (0.068 + b * SCAN_OUT_BOOST * 0.6);
 
             const og = ctx.createRadialGradient(px, py, 0, px, py, oR);
             og.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
@@ -259,7 +278,6 @@
       return;
     }
 
-    // Reactive elements: each fires mouseenter (add) + mouseleave (end)
     const reactive = [
       ...document.querySelectorAll('.index-item'),
       ...document.querySelectorAll('.home-intro h1, .home-intro p'),
