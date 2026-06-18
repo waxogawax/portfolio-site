@@ -4,7 +4,6 @@
   <svg id="network-svg" aria-hidden="true"></svg>
 </div>
 
-<!-- Popup is a sibling (not inside floating-network) so it receives scoped CSS and is accessible -->
 <div id="term-popup" role="dialog" aria-modal="true" aria-label="ページへの遷移">
   <p id="term-popup-label"></p>
   <ul id="term-popup-links"></ul>
@@ -12,19 +11,20 @@
 </div>
 
 <style>
+  /*
+   * Full-viewport overlay: nodes can be dragged anywhere without clipping.
+   * z-index 5 sits above home-container (z-index:1) and below site-header (z-index:10).
+   */
   #floating-network {
     position: fixed;
-    top: 10vh;
-    right: 3vw;
-    width: min(40vw, 580px);
-    height: 72vh;
-    /* Raised above header (z-index:10) and home-container (z-index:1) */
-    z-index: 50;
-    opacity: 0.85;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 5;
+    opacity: 0.88;
     mix-blend-mode: multiply;
     pointer-events: none;
     user-select: none;
-    will-change: transform;
   }
 
   #network-svg {
@@ -84,9 +84,7 @@
     color: var(--color-muted);
   }
 
-  #term-popup-links li a:hover {
-    opacity: 0.55;
-  }
+  #term-popup-links li a:hover { opacity: 0.55; }
 
   #term-popup-close {
     position: absolute;
@@ -101,16 +99,10 @@
     padding: 2px 4px;
     transition: color 0.14s;
   }
-
-  #term-popup-close:hover {
-    color: var(--color-text);
-  }
+  #term-popup-close:hover { color: var(--color-text); }
 
   @media (prefers-color-scheme: dark) {
-    #floating-network {
-      mix-blend-mode: screen;
-      opacity: 0.52;
-    }
+    #floating-network { mix-blend-mode: screen; opacity: 0.52; }
   }
 
   @media (max-width: 900px) {
@@ -118,17 +110,17 @@
       position: static;
       width: 100%;
       height: 220px;
-      opacity: 0.65;
-      margin-bottom: 2.5rem;
-      mix-blend-mode: normal;
       z-index: auto;
+      opacity: 0.65;
+      mix-blend-mode: normal;
+      margin-bottom: 2.5rem;
     }
   }
 </style>
 
 <script>
-// All SVG element styles are set via JS attributes — Astro's scoped CSS does not
-// reach dynamically created elements (they lack the data-astro-cid-* attribute).
+// All SVG element styles set directly in JS — Astro scoped CSS does not
+// reach dynamically created elements (no data-astro-cid-* attribute).
 
 const BLUE = "#0000ff";
 
@@ -138,62 +130,48 @@ const LAYER = {
 };
 
 const TERMS = [
-  { id: "curation",     label: ["curation",           "キュレーション"],     layer: 0 },
-  { id: "anthropology", label: ["anthropology",        "人類学"],            layer: 0 },
-  { id: "care",         label: ["care",                "ケア"],              layer: 0 },
-  { id: "exhibition",   label: ["exhibition space",    "展示空間"],          layer: 0 },
-  { id: "conversion",   label: ["conditions of conv.", "変換条件"],          layer: 0 },
-  { id: "cochlear",     label: ["cochlear implant",    "人工内耳"],          layer: 1 },
-  { id: "voice",        label: ["voice",               "声"],                layer: 1 },
-  { id: "silence",      label: ["silence",             "沈黙"],              layer: 1 },
-  { id: "translation",  label: ["translation",         "翻訳"],              layer: 1 },
-  { id: "caption",      label: ["caption",             "キャプション"],      layer: 1 },
-  { id: "text",         label: ["text",                "テクスト"],          layer: 1 },
-  { id: "body",         label: ["body",                "身体"],              layer: 1 },
-  { id: "eastasia",     label: ["East Asia",           "東アジア"],          layer: 2 },
-  { id: "death",        label: ["death",               "死"],                layer: 2 },
-  { id: "online",       label: ["online space",        "オンライン空間"],    layer: 2 },
-  { id: "christianity", label: ["Christian paradigm",  "キリスト教的範例性"],layer: 2 },
-  { id: "market",       label: ["market economy",      "市場経済"],          layer: 2 },
-  { id: "institution",  label: ["institution",         "制度"],              layer: 2 },
-  { id: "memory",       label: ["memory",              "記憶"],              layer: 2 },
-  { id: "imagination",  label: ["imagination",         "想像力"],            layer: 2 },
-  { id: "fiction",      label: ["make-believe",        "フィクション"],      layer: 2 },
-  { id: "poetics",      label: ["poetics",             "詩学"],              layer: 2 },
-  { id: "accessibility",label: ["accessibility",       "アクセシビリティ"],  layer: 2 },
+  { id: "curation",     label: ["curation",           "キュレーション"],      layer: 0 },
+  { id: "anthropology", label: ["anthropology",        "人類学"],             layer: 0 },
+  { id: "care",         label: ["care",                "ケア"],               layer: 0 },
+  { id: "exhibition",   label: ["exhibition space",    "展示空間"],           layer: 0 },
+  { id: "conversion",   label: ["conditions of conv.", "変換条件"],           layer: 0 },
+  { id: "cochlear",     label: ["cochlear implant",    "人工内耳"],           layer: 1 },
+  { id: "voice",        label: ["voice",               "声"],                 layer: 1 },
+  { id: "silence",      label: ["silence",             "沈黙"],               layer: 1 },
+  { id: "translation",  label: ["translation",         "翻訳"],               layer: 1 },
+  { id: "caption",      label: ["caption",             "キャプション"],       layer: 1 },
+  { id: "text",         label: ["text",                "テクスト"],           layer: 1 },
+  { id: "body",         label: ["body",                "身体"],               layer: 1 },
+  { id: "eastasia",     label: ["East Asia",           "東アジア"],           layer: 2 },
+  { id: "death",        label: ["death",               "死"],                 layer: 2 },
+  { id: "online",       label: ["online space",        "オンライン空間"],     layer: 2 },
+  { id: "christianity", label: ["Christian paradigm",  "キリスト教的範例性"], layer: 2 },
+  { id: "market",       label: ["market economy",      "市場経済"],           layer: 2 },
+  { id: "institution",  label: ["institution",         "制度"],               layer: 2 },
+  { id: "memory",       label: ["memory",              "記憶"],               layer: 2 },
+  { id: "imagination",  label: ["imagination",         "想像力"],             layer: 2 },
+  { id: "fiction",      label: ["make-believe",        "フィクション"],       layer: 2 },
+  { id: "poetics",      label: ["poetics",             "詩学"],               layer: 2 },
+  { id: "accessibility",label: ["accessibility",       "アクセシビリティ"],   layer: 2 },
 ];
 
 const LINKS = [
-  ["curation",    "exhibition"],
-  ["curation",    "conversion"],
-  ["curation",    "institution"],
-  ["curation",    "memory"],
-  ["curation",    "imagination"],
-  ["anthropology","translation"],
-  ["anthropology","eastasia"],
-  ["anthropology","poetics"],
-  ["care",        "body"],
-  ["care",        "accessibility"],
-  ["care",        "cochlear"],
-  ["translation", "caption"],
-  ["translation", "silence"],
-  ["translation", "cochlear"],
-  ["caption",     "exhibition"],
-  ["voice",       "silence"],
-  ["voice",       "text"],
-  ["text",        "fiction"],
-  ["fiction",     "imagination"],
-  ["death",       "online"],
-  ["christianity","market"],
-  ["conversion",  "institution"],
-  ["conversion",  "accessibility"],
-  ["body",        "cochlear"],
-  ["memory",      "exhibition"],
-  ["institution", "market"],
+  ["curation",    "exhibition"], ["curation",    "conversion"],
+  ["curation",    "institution"],["curation",    "memory"],
+  ["curation",    "imagination"],["anthropology","translation"],
+  ["anthropology","eastasia"],   ["anthropology","poetics"],
+  ["care",        "body"],       ["care",        "accessibility"],
+  ["care",        "cochlear"],   ["translation", "caption"],
+  ["translation", "silence"],    ["translation", "cochlear"],
+  ["caption",     "exhibition"], ["voice",       "silence"],
+  ["voice",       "text"],       ["text",        "fiction"],
+  ["fiction",     "imagination"],["death",       "online"],
+  ["christianity","market"],     ["conversion",  "institution"],
+  ["conversion",  "accessibility"],["body",      "cochlear"],
+  ["memory",      "exhibition"], ["institution", "market"],
   ["poetics",     "fiction"],
 ];
 
-// Pages to suggest when a term node is clicked (not dragged)
 const PAGE_LABELS = {
   "/exhibitions/": "Exhibitions",
   "/writings/":    "Writings",
@@ -229,13 +207,13 @@ const TERM_PAGES = {
   accessibility:["/research/",    "/exhibitions/", "/works/"],
 };
 
-// ── DOM refs ──────────────────────────────────────────────
-const svg       = document.getElementById("network-svg");
-const container = document.getElementById("floating-network");
-const popup     = document.getElementById("term-popup");
-const popLabel  = document.getElementById("term-popup-label");
-const popLinks  = document.getElementById("term-popup-links");
-const popClose  = document.getElementById("term-popup-close");
+// ── DOM refs ─────────────────────────────────────────────
+const svg      = document.getElementById("network-svg");
+const container= document.getElementById("floating-network");
+const popup    = document.getElementById("term-popup");
+const popLabel = document.getElementById("term-popup-label");
+const popLinks = document.getElementById("term-popup-links");
+const popClose = document.getElementById("term-popup-close");
 
 if (svg && container && popup) {
   const pos     = {};
@@ -245,22 +223,29 @@ if (svg && container && popup) {
   let rafId = 0, startTime = 0;
   let W = 0, H = 0;
 
-  // Drag state
-  let draggingId   = null;
-  let dragStartClient = null;   // { x, y } in client coords at pointerdown
-  let dragOffsetX  = 0;
-  let dragOffsetY  = 0;
-  const DRAG_PX    = 5;         // px threshold to count as a drag vs click
+  let draggingId      = null;
+  let dragStartClient = null;
+  let dragOffsetX     = 0;
+  let dragOffsetY     = 0;
+  const DRAG_PX = 5;
 
   function rnd(min, max) { return Math.random() * (max - min) + min; }
 
+  // SVG element coordinates = client coordinates when container is fixed inset:0
   function svgCoords(clientX, clientY) {
     const rect = svg.getBoundingClientRect();
-    const sw = rect.width  || W;
-    const sh = rect.height || H;
     return {
-      x: (clientX - rect.left) * (W / sw),
-      y: (clientY - rect.top)  * (H / sh),
+      x: (clientX - rect.left) * (W / (rect.width  || W)),
+      y: (clientY - rect.top)  * (H / (rect.height || H)),
+    };
+  }
+
+  // Convert SVG position back to client coordinates (for popup placement)
+  function svgToClient(svgX, svgY) {
+    const rect = svg.getBoundingClientRect();
+    return {
+      x: rect.left + svgX * (rect.width  / W),
+      y: rect.top  + svgY * (rect.height / H),
     };
   }
 
@@ -268,10 +253,10 @@ if (svg && container && popup) {
     return document.createElementNS("http://www.w3.org/2000/svg", tag);
   }
 
-  // ── Build ──────────────────────────────────────────────
+  // ── Build ────────────────────────────────────────────────
   function build() {
-    W = container.clientWidth  || 400;
-    H = container.clientHeight || 500;
+    W = container.clientWidth  || window.innerWidth;
+    H = container.clientHeight || window.innerHeight;
 
     svg.innerHTML = "";
     for (const k in nodeEls) delete nodeEls[k];
@@ -279,15 +264,20 @@ if (svg && container && popup) {
     for (const k in pos)     delete pos[k];
     for (const k in cur)     delete cur[k];
 
-    const cx = W / 2, cy = H / 2;
-    const byLayer = [[], [], []];
-    TERMS.forEach(t => byLayer[t.layer].push(t));
+    // Center nodes in the right portion of the viewport,
+    // matching the old right:3vw / width:40vw / top:10vh / height:72vh layout.
+    const cx   = W * 0.74;
+    const cy   = H * 0.44;
+    const vmin = Math.min(W, H);
 
     const rings = [
-      { rx: W * 0.20, ry: H * 0.17 },
-      { rx: W * 0.37, ry: H * 0.33 },
-      { rx: W * 0.48, ry: H * 0.46 },
+      { rx: vmin * 0.110, ry: vmin * 0.095 },
+      { rx: vmin * 0.210, ry: vmin * 0.185 },
+      { rx: vmin * 0.275, ry: vmin * 0.245 },
     ];
+
+    const byLayer = [[], [], []];
+    TERMS.forEach(t => byLayer[t.layer].push(t));
 
     byLayer.forEach((nodes, li) => {
       const { rx, ry } = rings[li];
@@ -304,13 +294,13 @@ if (svg && container && popup) {
       });
     });
 
-    // Lines — attributes set directly (Astro scoped CSS won't reach dynamic SVG elements)
+    // Lines
     LINKS.forEach(([src, tgt]) => {
       const ps = pos[src], pt = pos[tgt];
       if (!ps || !pt) return;
       const el = mkEl("line");
-      el.setAttribute("x1", ps.bx);  el.setAttribute("y1", ps.by);
-      el.setAttribute("x2", pt.bx);  el.setAttribute("y2", pt.by);
+      el.setAttribute("x1", ps.bx); el.setAttribute("y1", ps.by);
+      el.setAttribute("x2", pt.bx); el.setAttribute("y2", pt.by);
       el.setAttribute("stroke",       BLUE);
       el.setAttribute("fill",         "none");
       el.setAttribute("stroke-width", "0.7");
@@ -320,33 +310,31 @@ if (svg && container && popup) {
       lineEls[`${src}-${tgt}`] = el;
     });
 
-    // Text nodes — attributes set directly
+    // Text nodes
     TERMS.forEach(t => {
-      const p = pos[t.id];
+      const p  = pos[t.id];
       const [en, ja] = t.label;
-      const hasLink = Boolean(TERM_PAGES[t.id]);
+      const hasLink  = Boolean(TERM_PAGES[t.id]);
 
       const textEl = mkEl("text");
-      textEl.setAttribute("x",            p.bx);
-      textEl.setAttribute("y",            p.by);
-      textEl.setAttribute("fill",         BLUE);
-      textEl.setAttribute("opacity",      String(LAYER.opacity[t.layer]));
-      textEl.setAttribute("font-size",    LAYER.fontSize[t.layer]);
-      textEl.setAttribute("font-family",  "inherit");
+      textEl.setAttribute("x",             p.bx);
+      textEl.setAttribute("y",             p.by);
+      textEl.setAttribute("fill",          BLUE);
+      textEl.setAttribute("opacity",       String(LAYER.opacity[t.layer]));
+      textEl.setAttribute("font-size",     LAYER.fontSize[t.layer]);
+      textEl.setAttribute("font-family",   "inherit");
       textEl.setAttribute("letter-spacing","0.04em");
-      textEl.setAttribute("text-anchor",  "middle");
+      textEl.setAttribute("text-anchor",   "middle");
       textEl.style.pointerEvents = "auto";
-      textEl.style.cursor = hasLink ? "pointer" : "grab";
-      textEl.dataset.termId = t.id;
+      textEl.style.cursor        = hasLink ? "pointer" : "grab";
+      textEl.dataset.termId      = t.id;
 
       const sp1 = mkEl("tspan");
-      sp1.setAttribute("x",  p.bx);
-      sp1.setAttribute("dy", "-0.65em");
+      sp1.setAttribute("x", p.bx); sp1.setAttribute("dy", "-0.65em");
       sp1.textContent = en;
 
       const sp2 = mkEl("tspan");
-      sp2.setAttribute("x",  p.bx);
-      sp2.setAttribute("dy", "1.35em");
+      sp2.setAttribute("x", p.bx); sp2.setAttribute("dy", "1.35em");
       sp2.setAttribute("font-size", "0.93em");
       sp2.textContent = ja;
 
@@ -361,7 +349,7 @@ if (svg && container && popup) {
     rafId = requestAnimationFrame(animate);
   }
 
-  // ── Animate ───────────────────────────────────────────
+  // ── Animate ──────────────────────────────────────────────
   function animate(timestamp) {
     if (!startTime) startTime = timestamp;
     const elapsed = timestamp - startTime;
@@ -394,33 +382,32 @@ if (svg && container && popup) {
     rafId = requestAnimationFrame(animate);
   }
 
-  // ── Popup ─────────────────────────────────────────────
+  // ── Popup ────────────────────────────────────────────────
   function showPopup(termId, clientX, clientY) {
-    const term = TERMS.find(t => t.id === termId);
-    if (!term) return;
+    const term  = TERMS.find(t => t.id === termId);
     const pages = TERM_PAGES[termId];
-    if (!pages || pages.length === 0) return;
+    if (!term || !pages?.length) return;
 
     popLabel.textContent = `${term.label[0]}  /  ${term.label[1]}`;
-    popLinks.innerHTML = "";
+    popLinks.innerHTML   = "";
     pages.forEach(href => {
       const li = document.createElement("li");
       const a  = document.createElement("a");
-      a.href = href;
+      a.href        = href;
       a.textContent = PAGE_LABELS[href] || href;
       li.appendChild(a);
       popLinks.appendChild(li);
     });
 
-    // Show hidden first to measure dimensions
     popup.style.visibility = "hidden";
-    popup.style.display     = "block";
+    popup.style.display    = "block";
 
     requestAnimationFrame(() => {
-      const r = popup.getBoundingClientRect();
-      let left = clientX + 16;
-      let top  = clientY - r.height / 2;
+      const r    = popup.getBoundingClientRect();
+      let left   = clientX + 16;
+      let top    = clientY - r.height / 2;
       if (left + r.width  > window.innerWidth  - 12) left = clientX - r.width - 16;
+      if (left < 12)                                  left = 12;
       if (top  < 12)                                  top  = 12;
       if (top  + r.height > window.innerHeight - 12)  top  = window.innerHeight - r.height - 12;
       popup.style.left       = left + "px";
@@ -435,15 +422,26 @@ if (svg && container && popup) {
 
   popClose.addEventListener("click", hidePopup);
 
-  // ── Pointer events ────────────────────────────────────
+  // Show a random term popup on page load
+  function showRandomPopup() {
+    if (window.innerWidth <= 900) return;
+    const linkable = TERMS.filter(t => TERM_PAGES[t.id]?.length > 0);
+    if (!linkable.length) return;
+    const term = linkable[Math.floor(Math.random() * linkable.length)];
+    const node = cur[term.id];
+    if (!node) return;
+    const { x, y } = svgToClient(node.x, node.y);
+    showPopup(term.id, x, y);
+  }
+
+  // ── Pointer events ───────────────────────────────────────
   document.addEventListener("pointerdown", e => {
-    // Close popup on click outside it
     if (popup.style.display === "block" && !popup.contains(e.target)) {
       hidePopup();
     }
 
     const textEl = e.target.closest ? e.target.closest("[data-term-id]") : null;
-    const id = textEl?.dataset?.termId;
+    const id     = textEl?.dataset?.termId;
     if (!id || !cur[id]) return;
 
     draggingId      = id;
@@ -461,7 +459,6 @@ if (svg && container && popup) {
     const dx = e.clientX - dragStartClient.x;
     const dy = e.clientY - dragStartClient.y;
     if (Math.sqrt(dx * dx + dy * dy) < DRAG_PX) return;
-
     const { x, y } = svgCoords(e.clientX, e.clientY);
     pos[draggingId].bx = x - dragOffsetX;
     pos[draggingId].by = y - dragOffsetY;
@@ -469,17 +466,14 @@ if (svg && container && popup) {
 
   document.addEventListener("pointerup", e => {
     if (!draggingId) return;
-
     const id = draggingId;
     const dx = e.clientX - (dragStartClient?.x ?? e.clientX);
     const dy = e.clientY - (dragStartClient?.y ?? e.clientY);
     const wasDrag = Math.sqrt(dx * dx + dy * dy) >= DRAG_PX;
 
-    if (nodeEls[id]) {
-      nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
-    }
-    pos[id].bx = cur[id].x;
-    pos[id].by = cur[id].y;
+    if (nodeEls[id]) nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
+    pos[id].bx      = cur[id].x;
+    pos[id].by      = cur[id].y;
     draggingId      = null;
     dragStartClient = null;
 
@@ -488,10 +482,11 @@ if (svg && container && popup) {
     }
   });
 
-  // ── Init ──────────────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────
   function waitAndBuild() {
     if (container.clientWidth === 0) { requestAnimationFrame(waitAndBuild); return; }
     build();
+    setTimeout(showRandomPopup, 800);
   }
   requestAnimationFrame(waitAndBuild);
 
