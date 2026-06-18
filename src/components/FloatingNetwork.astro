@@ -12,11 +12,12 @@
     width: min(40vw, 580px);
     height: 72vh;
     z-index: 10;
-    opacity: 0.72;
+    opacity: 0.82;
     mix-blend-mode: multiply;
     pointer-events: none;
     user-select: none;
     will-change: transform;
+    color: var(--color-text);
   }
 
   #network-svg {
@@ -26,15 +27,15 @@
   }
 
   .net-link {
-    stroke: currentColor;
+    stroke: var(--color-text);
     fill: none;
-    stroke-width: 0.5;
-    opacity: 0.13;
+    stroke-width: 0.6;
+    opacity: 0.22;
     pointer-events: none;
   }
 
   .net-node {
-    fill: currentColor;
+    fill: var(--color-text);
     font-family: inherit;
     letter-spacing: 0.04em;
     text-anchor: middle;
@@ -43,16 +44,16 @@
   }
   .net-node:active { cursor: grabbing; }
 
-  .net-node.l0 { font-size: 13px;   opacity: 0.86; }
-  .net-node.l1 { font-size: 10.5px; opacity: 0.60; }
-  .net-node.l2 { font-size: 8.5px;  opacity: 0.38; }
+  .net-node.l0 { font-size: 13px;   opacity: 0.90; }
+  .net-node.l1 { font-size: 10.5px; opacity: 0.68; }
+  .net-node.l2 { font-size: 8.5px;  opacity: 0.46; }
 
   .net-node .ja { font-size: 0.93em; }
 
   @media (prefers-color-scheme: dark) {
     #floating-network {
       mix-blend-mode: screen;
-      opacity: 0.48;
+      opacity: 0.52;
     }
   }
 
@@ -61,7 +62,7 @@
       position: static;
       width: 100%;
       height: 220px;
-      opacity: 0.55;
+      opacity: 0.65;
       margin-bottom: 2.5rem;
       mix-blend-mode: normal;
     }
@@ -140,8 +141,22 @@ if (svg && container) {
   let startTime = 0;
   let W = 0, H = 0;
 
+  // Per-node drag state
+  let draggingId = null;
+  let dragOffsetX = 0, dragOffsetY = 0;
+
   function rnd(min, max) {
     return Math.random() * (max - min) + min;
+  }
+
+  function svgCoords(clientX, clientY) {
+    const rect = svg.getBoundingClientRect();
+    const scaleX = W / rect.width;
+    const scaleY = H / rect.height;
+    return {
+      x: (clientX - rect.left) * scaleX,
+      y: (clientY - rect.top) * scaleY,
+    };
   }
 
   function build() {
@@ -204,6 +219,7 @@ if (svg && container) {
       textEl.setAttribute("x", p.bx);
       textEl.setAttribute("y", p.by);
       textEl.setAttribute("class", `net-node l${t.layer}`);
+      textEl.dataset.termId = t.id;
 
       const sp1 = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
       sp1.setAttribute("x", p.bx);
@@ -237,8 +253,15 @@ if (svg && container) {
       const el = nodeEls[t.id];
       if (!p || !el) return;
 
-      const x = p.bx + Math.sin(elapsed * p.sx + p.px) * p.ax;
-      const y = p.by + Math.cos(elapsed * p.sy + p.py) * p.ay;
+      let x, y;
+      if (t.id === draggingId) {
+        // Position already updated by pointermove; use bx/by directly
+        x = p.bx;
+        y = p.by;
+      } else {
+        x = p.bx + Math.sin(elapsed * p.sx + p.px) * p.ax;
+        y = p.by + Math.cos(elapsed * p.sy + p.py) * p.ay;
+      }
       cur[t.id] = { x, y };
 
       el.setAttribute("x", x);
@@ -260,28 +283,34 @@ if (svg && container) {
     rafId = requestAnimationFrame(animate);
   }
 
-  // Drag: clicking any node drags the entire network
-  let dragging = false;
-  let dragStartX = 0, dragStartY = 0;
-  let offsetX = 0, offsetY = 0;
-
+  // Per-node drag
   document.addEventListener("pointerdown", e => {
-    if (!e.target.closest(".net-node")) return;
-    dragging = true;
-    dragStartX = e.clientX - offsetX;
-    dragStartY = e.clientY - offsetY;
+    const textEl = e.target.closest(".net-node");
+    if (!textEl) return;
+    const id = textEl.dataset.termId;
+    if (!id || !cur[id]) return;
+
+    draggingId = id;
+    const { x, y } = svgCoords(e.clientX, e.clientY);
+    dragOffsetX = x - cur[id].x;
+    dragOffsetY = y - cur[id].y;
     e.preventDefault();
   });
 
   document.addEventListener("pointermove", e => {
-    if (!dragging) return;
-    offsetX = e.clientX - dragStartX;
-    offsetY = e.clientY - dragStartY;
-    container.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+    if (!draggingId) return;
+    const { x, y } = svgCoords(e.clientX, e.clientY);
+    pos[draggingId].bx = x - dragOffsetX;
+    pos[draggingId].by = y - dragOffsetY;
   });
 
   document.addEventListener("pointerup", () => {
-    dragging = false;
+    if (draggingId) {
+      // Fix new base position so animation resumes from here
+      pos[draggingId].bx = cur[draggingId].x;
+      pos[draggingId].by = cur[draggingId].y;
+      draggingId = null;
+    }
   });
 
   // Wait for layout before reading dimensions
@@ -298,8 +327,7 @@ if (svg && container) {
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
-      offsetX = 0; offsetY = 0;
-      container.style.transform = "";
+      draggingId = null;
       build();
     }, 200);
   });
