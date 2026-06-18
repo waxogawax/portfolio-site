@@ -40,7 +40,6 @@
       if (prefersReduced || isMobile) draw(performance.now());
     }, { passive: true });
 
-    // Particles spread across full page (hero text → grid zone)
     const pts = Array.from({ length: N }, () => ({
       x:     0.05 + Math.random() * 0.90,
       y:     0.10 + Math.random() * 0.78,
@@ -63,7 +62,6 @@
         if (p.y < 0.08) p.vy += 0.000003 * dt;
         if (p.y > 0.92) p.vy -= 0.000003 * dt;
 
-        // Attractor at y≈0.50 (between hero text and grid)
         p.vy += 0.0000008 * dt * (0.50 - p.y);
         p.phase += 0.0004 * dt;
 
@@ -85,14 +83,67 @@
       }
     }
 
-    // Temporary activation pulses triggered by .index-item mouseenter
-    let activations = [];
+    // ── Dual-pulse activations ────────────────────────────────────────────────
+    //
+    // Each activation carries:
+    //   inner pulse  — short-range, bright, fast (INNER_LIFE ms)
+    //   outer pulse  — long-range, faint, slow;
+    //                  grows continuously while hovering,
+    //                  then fades from its frozen radius (OUTER_LIFE ms)
+    //
+    const INNER_LIFE  = 950;   // ms
+    const OUTER_LIFE  = 3800;  // ms (fade after hover ends)
+    const OUTER_GROW  = 0.105; // canvas-W per second during hover
+    const OUTER_MAX   = 0.46;  // canvas-W cap
+    const OUTER_START = 0.06;  // canvas-W at hover start
 
+    // activations: { x, y, born, hoverStart, hoverEnded, outerFadeR }
+    let activations = [];
+    const hoverMap  = new Map(); // el → activation
+
+    function outerRAt(hoverMs) {
+      const W = canvas.width;
+      return Math.min(W * OUTER_MAX, W * OUTER_START + W * OUTER_GROW * (hoverMs / 1000));
+    }
+
+    function addActivation(el, nx, ny) {
+      // Close previous activation for this element
+      const prev = hoverMap.get(el);
+      if (prev && prev.hoverEnded === null) {
+        prev.hoverEnded = performance.now();
+        prev.outerFadeR = outerRAt(prev.hoverEnded - prev.hoverStart);
+      }
+
+      const a = {
+        x:          nx,
+        y:          ny,
+        born:       performance.now(),
+        hoverStart: performance.now(),
+        hoverEnded: null,
+        outerFadeR: 0,
+      };
+      activations.push(a);
+      hoverMap.set(el, a);
+
+      // Evict oldest if too many
+      if (activations.length > 10) activations.shift();
+    }
+
+    function endActivation(el) {
+      const a = hoverMap.get(el);
+      if (a && a.hoverEnded === null) {
+        a.hoverEnded = performance.now();
+        a.outerFadeR = outerRAt(a.hoverEnded - a.hoverStart);
+        hoverMap.delete(el);
+      }
+    }
+
+    // ── Draw ─────────────────────────────────────────────────────────────────
     function draw(now) {
       const W = canvas.width, H = canvas.height;
       ctx.clearRect(0, 0, W, H);
 
-      // Continuous base wash across the full page (header → grid bottom)
+      // Background wash
       const fieldGrd = ctx.createLinearGradient(0, H * 0.05, 0, H * 0.95);
       fieldGrd.addColorStop(0,    'rgba(255,255,0,0)');
       fieldGrd.addColorStop(0.10, 'rgba(255,255,0,0.014)');
@@ -102,7 +153,7 @@
       ctx.fillStyle = fieldGrd;
       ctx.fillRect(0, 0, W, H);
 
-      // Particle halos — large radius, low alpha → smooth blended field
+      // Particle halos
       for (const p of pts) {
         const px     = p.x * W, py = p.y * H;
         const pulse  = 0.88 + 0.12 * Math.sin(p.phase);
@@ -131,27 +182,76 @@
         }
       }
 
-      // Activation pulses: expand and fade over ~2.2 s
-      activations = activations.filter(a => now - a.born < a.life);
+      // Dual-pulse activations
+      const nextActs = [];
       for (const a of activations) {
-        const t     = (now - a.born) / a.life;
-        const fade  = 0.5 * (1 + Math.cos(Math.PI * t));  // cosine ease-out 1→0
-        const R     = (0.07 + t * 0.13) * W;               // expands as it fades
-        const alpha = fade * 0.22;
-        const px    = a.x * W, py = a.y * H;
+        const px = a.x * W, py = a.y * H;
+        let innerAlive = false;
+        let outerAlive = false;
 
-        const ag = ctx.createRadialGradient(px, py, 0, px, py, R);
-        ag.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
-        ag.addColorStop(0.45, `rgba(255,255,0,${(alpha * 0.28).toFixed(4)})`);
-        ag.addColorStop(1,    'rgba(255,255,0,0)');
-        ctx.fillStyle = ag;
-        ctx.beginPath();
-        ctx.arc(px, py, R, 0, Math.PI * 2);
-        ctx.fill();
+        // Inner pulse: short-range, bright, fast
+        const innerT = (now - a.born) / INNER_LIFE;
+        if (innerT < 1.0) {
+          innerAlive    = true;
+          const fade    = 0.5 * (1 + Math.cos(Math.PI * innerT));
+          const iR      = W * (0.040 + innerT * 0.052); // compact expansion
+          const alpha   = fade * 0.40;
+
+          const ig = ctx.createRadialGradient(px, py, 0, px, py, iR);
+          ig.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
+          ig.addColorStop(0.45, `rgba(255,255,0,${(alpha * 0.42).toFixed(4)})`);
+          ig.addColorStop(1,    'rgba(255,255,0,0)');
+          ctx.fillStyle = ig;
+          ctx.beginPath();
+          ctx.arc(px, py, iR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Outer pulse: long-range, faint, slow
+        if (a.hoverEnded === null) {
+          // Cursor still on element — keep growing
+          outerAlive  = true;
+          const oR    = outerRAt(now - a.hoverStart);
+          const alpha = 0.078;
+
+          const og = ctx.createRadialGradient(px, py, 0, px, py, oR);
+          og.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
+          og.addColorStop(0.28, `rgba(255,255,0,${(alpha * 0.58).toFixed(4)})`);
+          og.addColorStop(0.65, `rgba(255,255,0,${(alpha * 0.20).toFixed(4)})`);
+          og.addColorStop(1,    'rgba(255,255,0,0)');
+          ctx.fillStyle = og;
+          ctx.beginPath();
+          ctx.arc(px, py, oR, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Cursor left — fade from frozen radius, slight continued expansion
+          const outerT = (now - a.hoverEnded) / OUTER_LIFE;
+          if (outerT < 1.0) {
+            outerAlive  = true;
+            const fade  = 0.5 * (1 + Math.cos(Math.PI * outerT));
+            const oR    = a.outerFadeR * (1 + outerT * 0.14); // gentle continued drift
+            const alpha = fade * 0.068;
+
+            const og = ctx.createRadialGradient(px, py, 0, px, py, oR);
+            og.addColorStop(0,    `rgba(255,255,0,${alpha.toFixed(4)})`);
+            og.addColorStop(0.28, `rgba(255,255,0,${(alpha * 0.58).toFixed(4)})`);
+            og.addColorStop(0.65, `rgba(255,255,0,${(alpha * 0.20).toFixed(4)})`);
+            og.addColorStop(1,    'rgba(255,255,0,0)');
+            ctx.fillStyle = og;
+            ctx.beginPath();
+            ctx.arc(px, py, oR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        if (innerAlive || outerAlive || a.hoverEnded === null) {
+          nextActs.push(a);
+        }
       }
+      activations = nextActs;
     }
 
-    // Pre-warm: 500 virtual frames so pattern is stable at first render
+    // Pre-warm
     for (let i = 0; i < 500; i++) update(16);
 
     if (prefersReduced || isMobile) {
@@ -159,7 +259,7 @@
       return;
     }
 
-    // Mouseenter activation: index grid cells + home intro text
+    // Reactive elements: each fires mouseenter (add) + mouseleave (end)
     const reactive = [
       ...document.querySelectorAll('.index-item'),
       ...document.querySelectorAll('.home-intro h1, .home-intro p'),
@@ -167,14 +267,13 @@
     reactive.forEach(el => {
       el.addEventListener('mouseenter', () => {
         const rect = el.getBoundingClientRect();
-        activations.push({
-          x:    (rect.left + rect.width  * 0.5) / window.innerWidth,
-          y:    (rect.top  + rect.height * 0.5) / window.innerHeight,
-          born: performance.now(),
-          life: 2200,
-        });
-        if (activations.length > 4) activations.shift();
+        addActivation(
+          el,
+          (rect.left + rect.width  * 0.5) / window.innerWidth,
+          (rect.top  + rect.height * 0.5) / window.innerHeight,
+        );
       });
+      el.addEventListener('mouseleave', () => endActivation(el));
     });
 
     let lastTime = null;
