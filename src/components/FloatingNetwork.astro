@@ -4,6 +4,13 @@
   <svg id="network-svg" aria-hidden="true"></svg>
 </div>
 
+<!-- Popup is a sibling (not inside floating-network) so it receives scoped CSS and is accessible -->
+<div id="term-popup" role="dialog" aria-modal="true" aria-label="ページへの遷移">
+  <p id="term-popup-label"></p>
+  <ul id="term-popup-links"></ul>
+  <button id="term-popup-close" aria-label="閉じる">×</button>
+</div>
+
 <style>
   #floating-network {
     position: fixed;
@@ -11,7 +18,8 @@
     right: 3vw;
     width: min(40vw, 580px);
     height: 72vh;
-    z-index: 10;
+    /* Raised above header (z-index:10) and home-container (z-index:1) */
+    z-index: 50;
     opacity: 0.85;
     mix-blend-mode: multiply;
     pointer-events: none;
@@ -23,6 +31,79 @@
     width: 100%;
     height: 100%;
     overflow: visible;
+  }
+
+  /* ── Term popup ── */
+  #term-popup {
+    display: none;
+    position: fixed;
+    z-index: 300;
+    background: var(--color-bg);
+    border: 1px solid var(--color-text);
+    padding: 14px 18px 16px;
+    min-width: 160px;
+    max-width: 240px;
+    box-shadow: 2px 2px 0 var(--color-text);
+    pointer-events: auto;
+  }
+
+  #term-popup-label {
+    font-size: 0.70rem;
+    font-weight: 500;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--color-text);
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--color-border);
+    line-height: 1.5;
+  }
+
+  #term-popup-links {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  #term-popup-links li a {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    transition: opacity 0.14s;
+  }
+
+  #term-popup-links li a::after {
+    content: "→";
+    font-size: 0.80em;
+    color: var(--color-muted);
+  }
+
+  #term-popup-links li a:hover {
+    opacity: 0.55;
+  }
+
+  #term-popup-close {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 2px 4px;
+    transition: color 0.14s;
+  }
+
+  #term-popup-close:hover {
+    color: var(--color-text);
   }
 
   @media (prefers-color-scheme: dark) {
@@ -40,44 +121,46 @@
       opacity: 0.65;
       margin-bottom: 2.5rem;
       mix-blend-mode: normal;
+      z-index: auto;
     }
   }
 </style>
 
 <script>
-// All SVG element styles are set directly in JS to bypass Astro's scoped CSS.
+// All SVG element styles are set via JS attributes — Astro's scoped CSS does not
+// reach dynamically created elements (they lack the data-astro-cid-* attribute).
 
 const BLUE = "#0000ff";
 
 const LAYER = {
-  fontSize:  ["13px",   "10.5px", "8.5px"],
-  opacity:   [0.90,     0.68,     0.46],
+  fontSize: ["13px", "10.5px", "8.5px"],
+  opacity:  [0.90,   0.68,     0.46],
 };
 
 const TERMS = [
-  { id: "curation",     label: ["curation",          "キュレーション"],     layer: 0 },
-  { id: "anthropology", label: ["anthropology",       "人類学"],            layer: 0 },
-  { id: "care",         label: ["care",               "ケア"],               layer: 0 },
-  { id: "exhibition",   label: ["exhibition space",   "展示空間"],           layer: 0 },
-  { id: "conversion",   label: ["conditions of conv.","変換条件"],           layer: 0 },
-  { id: "cochlear",     label: ["cochlear implant",   "人工内耳"],           layer: 1 },
-  { id: "voice",        label: ["voice",              "声"],                 layer: 1 },
-  { id: "silence",      label: ["silence",            "沈黙"],               layer: 1 },
-  { id: "translation",  label: ["translation",        "翻訳"],               layer: 1 },
-  { id: "caption",      label: ["caption",            "キャプション"],       layer: 1 },
-  { id: "text",         label: ["text",               "テクスト"],           layer: 1 },
-  { id: "body",         label: ["body",               "身体"],               layer: 1 },
-  { id: "eastasia",     label: ["East Asia",          "東アジア"],           layer: 2 },
-  { id: "death",        label: ["death",              "死"],                 layer: 2 },
-  { id: "online",       label: ["online space",       "オンライン空間"],     layer: 2 },
-  { id: "christianity", label: ["Christian paradigm", "キリスト教的範例性"], layer: 2 },
-  { id: "market",       label: ["market economy",     "市場経済"],           layer: 2 },
-  { id: "institution",  label: ["institution",        "制度"],               layer: 2 },
-  { id: "memory",       label: ["memory",             "記憶"],               layer: 2 },
-  { id: "imagination",  label: ["imagination",        "想像力"],             layer: 2 },
-  { id: "fiction",      label: ["make-believe",       "フィクション"],       layer: 2 },
-  { id: "poetics",      label: ["poetics",            "詩学"],               layer: 2 },
-  { id: "accessibility",label: ["accessibility",      "アクセシビリティ"],   layer: 2 },
+  { id: "curation",     label: ["curation",           "キュレーション"],     layer: 0 },
+  { id: "anthropology", label: ["anthropology",        "人類学"],            layer: 0 },
+  { id: "care",         label: ["care",                "ケア"],              layer: 0 },
+  { id: "exhibition",   label: ["exhibition space",    "展示空間"],          layer: 0 },
+  { id: "conversion",   label: ["conditions of conv.", "変換条件"],          layer: 0 },
+  { id: "cochlear",     label: ["cochlear implant",    "人工内耳"],          layer: 1 },
+  { id: "voice",        label: ["voice",               "声"],                layer: 1 },
+  { id: "silence",      label: ["silence",             "沈黙"],              layer: 1 },
+  { id: "translation",  label: ["translation",         "翻訳"],              layer: 1 },
+  { id: "caption",      label: ["caption",             "キャプション"],      layer: 1 },
+  { id: "text",         label: ["text",                "テクスト"],          layer: 1 },
+  { id: "body",         label: ["body",                "身体"],              layer: 1 },
+  { id: "eastasia",     label: ["East Asia",           "東アジア"],          layer: 2 },
+  { id: "death",        label: ["death",               "死"],                layer: 2 },
+  { id: "online",       label: ["online space",        "オンライン空間"],    layer: 2 },
+  { id: "christianity", label: ["Christian paradigm",  "キリスト教的範例性"],layer: 2 },
+  { id: "market",       label: ["market economy",      "市場経済"],          layer: 2 },
+  { id: "institution",  label: ["institution",         "制度"],              layer: 2 },
+  { id: "memory",       label: ["memory",              "記憶"],              layer: 2 },
+  { id: "imagination",  label: ["imagination",         "想像力"],            layer: 2 },
+  { id: "fiction",      label: ["make-believe",        "フィクション"],      layer: 2 },
+  { id: "poetics",      label: ["poetics",             "詩学"],              layer: 2 },
+  { id: "accessibility",label: ["accessibility",       "アクセシビリティ"],  layer: 2 },
 ];
 
 const LINKS = [
@@ -110,28 +193,74 @@ const LINKS = [
   ["poetics",     "fiction"],
 ];
 
-const svg = document.getElementById("network-svg");
-const container = document.getElementById("floating-network");
+// Pages to suggest when a term node is clicked (not dragged)
+const PAGE_LABELS = {
+  "/exhibitions/": "Exhibitions",
+  "/writings/":    "Writings",
+  "/works/":       "Works",
+  "/research/":    "Research",
+  "/about/":       "About",
+  "/diary/":       "Diary",
+};
 
-if (svg && container) {
-  const pos = {};
-  const cur = {};
+const TERM_PAGES = {
+  curation:     ["/exhibitions/", "/research/", "/about/"],
+  anthropology: ["/research/",    "/writings/"],
+  care:         ["/exhibitions/", "/research/"],
+  exhibition:   ["/exhibitions/", "/works/"],
+  conversion:   ["/research/",    "/about/"],
+  cochlear:     ["/about/",       "/research/"],
+  voice:        ["/writings/",    "/research/"],
+  silence:      ["/writings/",    "/exhibitions/"],
+  translation:  ["/writings/",    "/research/"],
+  caption:      ["/exhibitions/", "/works/"],
+  text:         ["/writings/",    "/research/"],
+  body:         ["/research/",    "/writings/"],
+  eastasia:     ["/research/",    "/exhibitions/"],
+  death:        ["/research/",    "/writings/"],
+  online:       ["/research/",    "/works/"],
+  christianity: ["/research/"],
+  market:       ["/research/",    "/exhibitions/"],
+  institution:  ["/research/",    "/exhibitions/"],
+  memory:       ["/exhibitions/", "/writings/"],
+  imagination:  ["/writings/",    "/research/"],
+  fiction:      ["/writings/",    "/research/"],
+  poetics:      ["/writings/",    "/research/"],
+  accessibility:["/research/",    "/exhibitions/", "/works/"],
+};
+
+// ── DOM refs ──────────────────────────────────────────────
+const svg       = document.getElementById("network-svg");
+const container = document.getElementById("floating-network");
+const popup     = document.getElementById("term-popup");
+const popLabel  = document.getElementById("term-popup-label");
+const popLinks  = document.getElementById("term-popup-links");
+const popClose  = document.getElementById("term-popup-close");
+
+if (svg && container && popup) {
+  const pos     = {};
+  const cur     = {};
   const nodeEls = {};
   const lineEls = {};
-  let rafId = 0;
-  let startTime = 0;
+  let rafId = 0, startTime = 0;
   let W = 0, H = 0;
 
-  let draggingId = null;
-  let dragOffsetX = 0, dragOffsetY = 0;
+  // Drag state
+  let draggingId   = null;
+  let dragStartClient = null;   // { x, y } in client coords at pointerdown
+  let dragOffsetX  = 0;
+  let dragOffsetY  = 0;
+  const DRAG_PX    = 5;         // px threshold to count as a drag vs click
 
   function rnd(min, max) { return Math.random() * (max - min) + min; }
 
   function svgCoords(clientX, clientY) {
     const rect = svg.getBoundingClientRect();
+    const sw = rect.width  || W;
+    const sh = rect.height || H;
     return {
-      x: (clientX - rect.left) * (W / (rect.width  || W)),
-      y: (clientY - rect.top)  * (H / (rect.height || H)),
+      x: (clientX - rect.left) * (W / sw),
+      y: (clientY - rect.top)  * (H / sh),
     };
   }
 
@@ -139,6 +268,7 @@ if (svg && container) {
     return document.createElementNS("http://www.w3.org/2000/svg", tag);
   }
 
+  // ── Build ──────────────────────────────────────────────
   function build() {
     W = container.clientWidth  || 400;
     H = container.clientHeight || 500;
@@ -166,60 +296,56 @@ if (svg && container) {
         pos[t.id] = {
           bx: cx + Math.cos(angle) * rx * rnd(0.82, 1.18),
           by: cy + Math.sin(angle) * ry * rnd(0.82, 1.18),
-          px: rnd(0, Math.PI * 2),
-          py: rnd(0, Math.PI * 2),
-          ax: rnd(1.5, 3.5),
-          ay: rnd(1.5, 3.5),
-          sx: rnd(0.00010, 0.00025),
-          sy: rnd(0.00010, 0.00025),
+          px: rnd(0, Math.PI * 2), py: rnd(0, Math.PI * 2),
+          ax: rnd(1.5, 3.5),       ay: rnd(1.5, 3.5),
+          sx: rnd(0.00010, 0.00025), sy: rnd(0.00010, 0.00025),
         };
         cur[t.id] = { x: pos[t.id].bx, y: pos[t.id].by };
       });
     });
 
-    // Lines — all styles set directly (Astro scoped CSS doesn't reach dynamic elements)
+    // Lines — attributes set directly (Astro scoped CSS won't reach dynamic SVG elements)
     LINKS.forEach(([src, tgt]) => {
       const ps = pos[src], pt = pos[tgt];
       if (!ps || !pt) return;
       const el = mkEl("line");
-      el.setAttribute("x1", ps.bx);
-      el.setAttribute("y1", ps.by);
-      el.setAttribute("x2", pt.bx);
-      el.setAttribute("y2", pt.by);
-      el.setAttribute("stroke", BLUE);
-      el.setAttribute("fill", "none");
+      el.setAttribute("x1", ps.bx);  el.setAttribute("y1", ps.by);
+      el.setAttribute("x2", pt.bx);  el.setAttribute("y2", pt.by);
+      el.setAttribute("stroke",       BLUE);
+      el.setAttribute("fill",         "none");
       el.setAttribute("stroke-width", "0.7");
-      el.setAttribute("opacity", "0.28");
+      el.setAttribute("opacity",      "0.28");
       el.style.pointerEvents = "none";
       svg.appendChild(el);
       lineEls[`${src}-${tgt}`] = el;
     });
 
-    // Text nodes — all styles set directly
+    // Text nodes — attributes set directly
     TERMS.forEach(t => {
       const p = pos[t.id];
       const [en, ja] = t.label;
+      const hasLink = Boolean(TERM_PAGES[t.id]);
 
       const textEl = mkEl("text");
-      textEl.setAttribute("x", p.bx);
-      textEl.setAttribute("y", p.by);
-      textEl.setAttribute("fill", BLUE);
-      textEl.setAttribute("opacity", String(LAYER.opacity[t.layer]));
-      textEl.setAttribute("font-size", LAYER.fontSize[t.layer]);
-      textEl.setAttribute("font-family", "inherit");
-      textEl.setAttribute("letter-spacing", "0.04em");
-      textEl.setAttribute("text-anchor", "middle");
+      textEl.setAttribute("x",            p.bx);
+      textEl.setAttribute("y",            p.by);
+      textEl.setAttribute("fill",         BLUE);
+      textEl.setAttribute("opacity",      String(LAYER.opacity[t.layer]));
+      textEl.setAttribute("font-size",    LAYER.fontSize[t.layer]);
+      textEl.setAttribute("font-family",  "inherit");
+      textEl.setAttribute("letter-spacing","0.04em");
+      textEl.setAttribute("text-anchor",  "middle");
       textEl.style.pointerEvents = "auto";
-      textEl.style.cursor = "grab";
+      textEl.style.cursor = hasLink ? "pointer" : "grab";
       textEl.dataset.termId = t.id;
 
       const sp1 = mkEl("tspan");
-      sp1.setAttribute("x", p.bx);
+      sp1.setAttribute("x",  p.bx);
       sp1.setAttribute("dy", "-0.65em");
       sp1.textContent = en;
 
       const sp2 = mkEl("tspan");
-      sp2.setAttribute("x", p.bx);
+      sp2.setAttribute("x",  p.bx);
       sp2.setAttribute("dy", "1.35em");
       sp2.setAttribute("font-size", "0.93em");
       sp2.textContent = ja;
@@ -235,81 +361,136 @@ if (svg && container) {
     rafId = requestAnimationFrame(animate);
   }
 
+  // ── Animate ───────────────────────────────────────────
   function animate(timestamp) {
     if (!startTime) startTime = timestamp;
     const elapsed = timestamp - startTime;
 
     TERMS.forEach(t => {
-      const p = pos[t.id];
-      const el = nodeEls[t.id];
+      const p = pos[t.id], el = nodeEls[t.id];
       if (!p || !el) return;
 
       let x, y;
       if (t.id === draggingId) {
-        x = p.bx;
-        y = p.by;
+        x = p.bx; y = p.by;
       } else {
         x = p.bx + Math.sin(elapsed * p.sx + p.px) * p.ax;
         y = p.by + Math.cos(elapsed * p.sy + p.py) * p.ay;
       }
       cur[t.id] = { x, y };
-
       el.setAttribute("x", x);
       el.setAttribute("y", y);
       el.querySelectorAll("tspan").forEach(sp => sp.setAttribute("x", x));
     });
 
     LINKS.forEach(([src, tgt]) => {
-      const ps = cur[src], pt = cur[tgt];
-      const el = lineEls[`${src}-${tgt}`];
+      const ps = cur[src], pt = cur[tgt], el = lineEls[`${src}-${tgt}`];
       if (ps && pt && el) {
-        el.setAttribute("x1", ps.x);
-        el.setAttribute("y1", ps.y);
-        el.setAttribute("x2", pt.x);
-        el.setAttribute("y2", pt.y);
+        el.setAttribute("x1", ps.x); el.setAttribute("y1", ps.y);
+        el.setAttribute("x2", pt.x); el.setAttribute("y2", pt.y);
       }
     });
 
     rafId = requestAnimationFrame(animate);
   }
 
-  // Per-node drag
+  // ── Popup ─────────────────────────────────────────────
+  function showPopup(termId, clientX, clientY) {
+    const term = TERMS.find(t => t.id === termId);
+    if (!term) return;
+    const pages = TERM_PAGES[termId];
+    if (!pages || pages.length === 0) return;
+
+    popLabel.textContent = `${term.label[0]}  /  ${term.label[1]}`;
+    popLinks.innerHTML = "";
+    pages.forEach(href => {
+      const li = document.createElement("li");
+      const a  = document.createElement("a");
+      a.href = href;
+      a.textContent = PAGE_LABELS[href] || href;
+      li.appendChild(a);
+      popLinks.appendChild(li);
+    });
+
+    // Show hidden first to measure dimensions
+    popup.style.visibility = "hidden";
+    popup.style.display     = "block";
+
+    requestAnimationFrame(() => {
+      const r = popup.getBoundingClientRect();
+      let left = clientX + 16;
+      let top  = clientY - r.height / 2;
+      if (left + r.width  > window.innerWidth  - 12) left = clientX - r.width - 16;
+      if (top  < 12)                                  top  = 12;
+      if (top  + r.height > window.innerHeight - 12)  top  = window.innerHeight - r.height - 12;
+      popup.style.left       = left + "px";
+      popup.style.top        = top  + "px";
+      popup.style.visibility = "visible";
+    });
+  }
+
+  function hidePopup() {
+    popup.style.display = "none";
+  }
+
+  popClose.addEventListener("click", hidePopup);
+
+  // ── Pointer events ────────────────────────────────────
   document.addEventListener("pointerdown", e => {
-    const textEl = e.target.closest
-      ? e.target.closest("[data-term-id]")
-      : null;
-    const id = textEl && textEl.dataset && textEl.dataset.termId;
+    // Close popup on click outside it
+    if (popup.style.display === "block" && !popup.contains(e.target)) {
+      hidePopup();
+    }
+
+    const textEl = e.target.closest ? e.target.closest("[data-term-id]") : null;
+    const id = textEl?.dataset?.termId;
     if (!id || !cur[id]) return;
 
-    draggingId = id;
+    draggingId      = id;
+    dragStartClient = { x: e.clientX, y: e.clientY };
     textEl.style.cursor = "grabbing";
-    const { x, y } = svgCoords(e.clientX, e.clientY);
-    dragOffsetX = x - cur[id].x;
-    dragOffsetY = y - cur[id].y;
+
+    const svgP  = svgCoords(e.clientX, e.clientY);
+    dragOffsetX = svgP.x - cur[id].x;
+    dragOffsetY = svgP.y - cur[id].y;
     e.preventDefault();
   });
 
   document.addEventListener("pointermove", e => {
-    if (!draggingId) return;
+    if (!draggingId || !dragStartClient) return;
+    const dx = e.clientX - dragStartClient.x;
+    const dy = e.clientY - dragStartClient.y;
+    if (Math.sqrt(dx * dx + dy * dy) < DRAG_PX) return;
+
     const { x, y } = svgCoords(e.clientX, e.clientY);
     pos[draggingId].bx = x - dragOffsetX;
     pos[draggingId].by = y - dragOffsetY;
   });
 
-  document.addEventListener("pointerup", () => {
-    if (draggingId) {
-      if (nodeEls[draggingId]) nodeEls[draggingId].style.cursor = "grab";
-      pos[draggingId].bx = cur[draggingId].x;
-      pos[draggingId].by = cur[draggingId].y;
-      draggingId = null;
+  document.addEventListener("pointerup", e => {
+    if (!draggingId) return;
+
+    const id = draggingId;
+    const dx = e.clientX - (dragStartClient?.x ?? e.clientX);
+    const dy = e.clientY - (dragStartClient?.y ?? e.clientY);
+    const wasDrag = Math.sqrt(dx * dx + dy * dy) >= DRAG_PX;
+
+    if (nodeEls[id]) {
+      nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
+    }
+    pos[id].bx = cur[id].x;
+    pos[id].by = cur[id].y;
+    draggingId      = null;
+    dragStartClient = null;
+
+    if (!wasDrag && TERM_PAGES[id]) {
+      showPopup(id, e.clientX, e.clientY);
     }
   });
 
+  // ── Init ──────────────────────────────────────────────
   function waitAndBuild() {
-    if (container.clientWidth === 0) {
-      requestAnimationFrame(waitAndBuild);
-      return;
-    }
+    if (container.clientWidth === 0) { requestAnimationFrame(waitAndBuild); return; }
     build();
   }
   requestAnimationFrame(waitAndBuild);
@@ -317,10 +498,7 @@ if (svg && container) {
   let resizeTimer = 0;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => {
-      draggingId = null;
-      build();
-    }, 200);
+    resizeTimer = setTimeout(() => { draggingId = null; hidePopup(); build(); }, 200);
   });
 }
 </script>
