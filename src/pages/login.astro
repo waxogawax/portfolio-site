@@ -2,6 +2,34 @@
 import { SignIn } from '@clerk/astro/components';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
+// Clerk's hosted "Account Portal" sign-in page lives on Clerk's own domain
+// (derived from the publishable key's Frontend API host), separate from any
+// JS widget embedded on this site. Opening it directly sidesteps Safari ITP /
+// cookie quirks that can break the in-page <SignIn/> widget.
+// Algorithm mirrors @clerk/shared's parsePublishableKey + buildAccountsBaseUrl.
+function getAccountsPortalSignInUrl(redirectUrl: string): string | null {
+  const key = import.meta.env.PUBLIC_CLERK_PUBLISHABLE_KEY ?? '';
+  if (!/^pk_(test|live)_/.test(key)) return null;
+
+  const encoded = key.split('_')[2];
+  if (!encoded) return null;
+
+  let decoded: string;
+  try {
+    decoded = atob(encoded);
+  } catch {
+    return null;
+  }
+  if (!decoded.endsWith('$')) return null;
+
+  const frontendApi = decoded.slice(0, -1);
+  const accountsHost = frontendApi
+    .replace(/clerk\.accountsstage\./, 'accountsstage.')
+    .replace(/clerk\.accounts\.|clerk\./, 'accounts.');
+
+  return `https://${accountsHost}/sign-in?redirect_url=${encodeURIComponent(redirectUrl)}`;
+}
+
 const redirectParam = Astro.url.searchParams.get('redirect');
 const isSafeRedirect = !!redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//');
 const redirectTarget = isSafeRedirect ? redirectParam : '/diary/';
@@ -11,7 +39,9 @@ if (userId) {
   return Astro.redirect(redirectTarget);
 }
 
-const reopenUrl = `/login?redirect=${encodeURIComponent(redirectTarget)}`;
+const hostedSignInUrl =
+  getAccountsPortalSignInUrl(`${Astro.url.origin}${redirectTarget}`) ??
+  `/login?redirect=${encodeURIComponent(redirectTarget)}`;
 ---
 
 <BaseLayout title="Login" description="ログイン">
@@ -25,7 +55,7 @@ const reopenUrl = `/login?redirect=${encodeURIComponent(redirectTarget)}`;
 
     <p class="login-fallback">
       ログイン画面が表示されない場合は、
-      <a href={reopenUrl} target="_blank" rel="noopener noreferrer">別ウィンドウでログインページを開く</a>
+      <a href={hostedSignInUrl} target="_blank" rel="noopener noreferrer">別ウィンドウでログインページを開く</a>
       をお試しください。Safariでは、Cookieやキャッシュの影響で表示されないことがあります。
     </p>
   </div>
