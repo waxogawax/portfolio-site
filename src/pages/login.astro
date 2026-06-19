@@ -10,6 +10,8 @@ const { userId } = Astro.locals.auth();
 if (userId) {
   return Astro.redirect(redirectTarget);
 }
+
+const reopenUrl = `/login?redirect=${encodeURIComponent(redirectTarget)}`;
 ---
 
 <BaseLayout title="Login" description="ログイン">
@@ -20,6 +22,12 @@ if (userId) {
       <p>初めての方は、メールアドレスを登録してアカウントを作成してください。登録済みの方は、メールアドレスでログインしてください。</p>
     </div>
     <SignIn forceRedirectUrl={redirectTarget} />
+
+    <p class="login-fallback">
+      ログイン画面が表示されない場合は、
+      <a href={reopenUrl} target="_blank" rel="noopener noreferrer">別ウィンドウでログインページを開く</a>
+      をお試しください。Safariでは、Cookieやキャッシュの影響で表示されないことがあります。
+    </p>
   </div>
 </BaseLayout>
 
@@ -52,5 +60,18 @@ if (userId) {
 
   .login-message p + p {
     margin-top: 8px;
+  }
+
+  .login-fallback {
+    max-width: 420px;
+    text-align: center;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: var(--color-muted);
+  }
+
+  .login-fallback a {
+    color: var(--color-text);
+    text-decoration: underline;
   }
 </style>
