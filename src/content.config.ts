@@ -9,6 +9,7 @@ const diary = defineCollection({
     description: z.string().optional(),
     tags: z.array(z.string()).default([]),
     draft: z.boolean().default(false),
+    visibility: z.enum(['public', 'members', 'private']).default('public'),
   }),
 });
 

@@ -2,6 +2,8 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
+export const prerender = true;
+
 const entries = await getCollection('exhibitions', ({ data }) => {
   return data.draft !== true;
 });
