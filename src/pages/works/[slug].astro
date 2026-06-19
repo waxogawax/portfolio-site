@@ -4,8 +4,6 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import TermGraphPanel from '../../components/TermGraphPanel.astro';
 import { buildTermGraph } from '../../lib/termGraph.ts';
 
-export const prerender = true;
-
 export async function getStaticPaths() {
   const [entries, graph] = await Promise.all([
     getCollection('works', ({ data }) => data.draft !== true),

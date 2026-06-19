@@ -2,8 +2,6 @@
 import { buildTermGraph } from '../../lib/termGraph.ts';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
-export const prerender = true;
-
 export async function getStaticPaths() {
   const graph = await buildTermGraph();
 

@@ -4,8 +4,6 @@ import TuringField from '../components/TuringField.astro';
 import FloatingNetwork from '../components/FloatingNetwork.astro';
 import { getCollection } from 'astro:content';
 
-export const prerender = true;
-
 const allExhibitions = await getCollection('exhibitions', ({ data }) => !data.draft);
 const recentExh = allExhibitions
   .sort((a, b) => b.data.startDate.valueOf() - a.data.startDate.valueOf())

@@ -269,7 +269,7 @@ function scoreTermsForPage(page: PageDoc): Record<string, number> {
 
 async function _build(): Promise<TermGraph> {
   const [diary, exhibitions, works, writings] = await Promise.all([
-    getCollection('diary', e => !e.data.draft && e.data.visibility !== 'private').catch(() => []),
+    getCollection('diary', e => !e.data.draft).catch(() => []),
     getCollection('exhibitions', e => !e.data.draft).catch(() => []),
     getCollection('works', e => !e.data.draft).catch(() => []),
     getCollection('writings', e => !e.data.draft).catch(() => []),
