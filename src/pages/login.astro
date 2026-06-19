@@ -14,6 +14,11 @@ if (userId) {
 
 <BaseLayout title="Login" description="ログイン">
   <div class="login-page">
+    <div class="login-message">
+      <h1>ログインが必要です</h1>
+      <p>この記事はログインユーザー限定で公開しています。</p>
+      <p>初めての方は、メールアドレスを登録してアカウントを作成してください。登録済みの方は、メールアドレスでログインしてください。</p>
+    </div>
     <SignIn forceRedirectUrl={redirectTarget} />
   </div>
 </BaseLayout>
@@ -21,7 +26,31 @@ if (userId) {
 <style>
   .login-page {
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
     padding-block: 56px;
+  }
+
+  .login-message {
+    max-width: 420px;
+    text-align: center;
+  }
+
+  .login-message h1 {
+    font-family: var(--font-serif);
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+
+  .login-message p {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--color-muted);
+  }
+
+  .login-message p + p {
+    margin-top: 8px;
   }
 </style>
