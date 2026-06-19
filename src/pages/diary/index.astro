@@ -2,8 +2,10 @@
 import { getCollection } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 
+export const prerender = true;
+
 const entries = await getCollection('diary', ({ data }) => {
-  return data.draft !== true;
+  return data.draft !== true && data.visibility !== 'private';
 });
 
 const sortedEntries = entries.sort(
@@ -30,6 +32,9 @@ const sortedEntries = entries.sort(
           >
             {entry.data.title}
           </a>
+          {entry.data.visibility === 'members' && (
+            <span class="diary-members-label">members only</span>
+          )}
           {entry.data.description && (
             <p class="diary-description">{entry.data.description}</p>
           )}
@@ -38,3 +43,17 @@ const sortedEntries = entries.sort(
     ))}
   </ul>
 </BaseLayout>
+
+<style>
+  .diary-members-label {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    vertical-align: middle;
+  }
+</style>

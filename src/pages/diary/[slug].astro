@@ -1,22 +1,24 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { getEntry, render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import TermGraphPanel from '../../components/TermGraphPanel.astro';
 import { buildTermGraph } from '../../lib/termGraph.ts';
 
-export async function getStaticPaths() {
-  const [entries, graph] = await Promise.all([
-    getCollection('diary', ({ data }) => data.draft !== true),
-    buildTermGraph(),
-  ]);
+const { slug } = Astro.params;
+const entry = slug ? await getEntry('diary', slug) : undefined;
 
-  return entries.map((entry) => ({
-    params: { slug: entry.id.replace(/\.md$/, '') },
-    props: { entry, graph },
-  }));
+if (!entry || entry.data.draft || entry.data.visibility === 'private') {
+  return Astro.rewrite('/404');
 }
 
-const { entry, graph } = Astro.props;
+if (entry.data.visibility === 'members') {
+  const { userId } = Astro.locals.auth();
+  if (!userId) {
+    return Astro.redirect(`/login?redirect=/diary/${slug}`);
+  }
+}
+
+const graph = await buildTermGraph();
 const { Content } = await render(entry);
 
 const pageId = `diary/${entry.id.replace(/\.md$/, '')}`;
