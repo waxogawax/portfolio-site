@@ -492,18 +492,20 @@ const currentPath = Astro.url.pathname;
     font-size: 0.95rem;
     color: var(--color-muted);
     max-width: 520px;
-    line-height: 2;
+    line-height: 2.15;
   }
 
-  /* Old-newspaper lead-in: same gothic typeface as the body, just larger and
-     tighter, sitting on the same baseline. Stays well below the "waxogawa"
-     heading size so it reads as emphasis, not a second heading. */
+  /* Oversized inline emphasis for key terms, set tight against the body copy.
+     The taller line-height above keeps neighbouring text from crowding it. */
   .home-intro .word-accent {
-    font-size: 1.7em;
-    font-weight: 600;
-    letter-spacing: -0.06em;
+    display: inline-block;
+    font-family: var(--font-serif);
+    font-size: 2.6em;
+    font-weight: 500;
+    line-height: 0.6;
+    letter-spacing: -0.05em;
     color: var(--color-text);
-    margin-inline: 0.05em;
+    vertical-align: -0.32em;
   }
 
   /* ── Exhibitions list ── */
