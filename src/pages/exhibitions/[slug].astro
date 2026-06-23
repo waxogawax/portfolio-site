@@ -7,18 +7,23 @@ import { buildTermGraph } from '../../lib/termGraph.ts';
 export const prerender = true;
 
 export async function getStaticPaths() {
-  const [entries, graph] = await Promise.all([
+  const [entries, graph, works, writings] = await Promise.all([
     getCollection('exhibitions', ({ data }) => data.draft !== true),
     buildTermGraph(),
+    getCollection('works'),
+    getCollection('writings'),
   ]);
+
+  const workTitles = new Map(works.map((w) => [w.id.replace(/\.md$/, ''), w.data.title]));
+  const writingTitles = new Map(writings.map((w) => [w.id.replace(/\.md$/, ''), w.data.title]));
 
   return entries.map((entry) => ({
     params: { slug: entry.id.replace(/\.md$/, '') },
-    props: { entry, graph },
+    props: { entry, graph, workTitles, writingTitles },
   }));
 }
 
-const { entry, graph } = Astro.props;
+const { entry, graph, workTitles, writingTitles } = Astro.props;
 const { Content } = await render(entry);
 const d = entry.data;
 
@@ -190,7 +195,7 @@ function formatDateRange(start: Date, end?: Date): string {
             <ul class="exh-related-list" style="margin-bottom: 20px;">
               {d.relatedWorks.map((slug) => (
                 <li class="exh-related-item">
-                  <a href={`/works/${slug}/`}>{slug}</a>
+                  <a href={`/works/${slug}/`}>{workTitles.get(slug) ?? slug}</a>
                 </li>
               ))}
             </ul>
@@ -198,11 +203,11 @@ function formatDateRange(start: Date, end?: Date): string {
         )}
         {d.relatedWritings.length > 0 && (
           <>
-            <p style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 8px;">Writings</p>
+            <p style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-muted); margin-bottom: 8px;">本展に寄せた文章</p>
             <ul class="exh-related-list">
               {d.relatedWritings.map((slug) => (
                 <li class="exh-related-item">
-                  <a href={`/writings/${slug}/`}>{slug}</a>
+                  <a href={`/writings/${slug}/`}>{writingTitles.get(slug) ?? slug}</a>
                 </li>
               ))}
             </ul>
