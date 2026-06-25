@@ -13,6 +13,18 @@ artists:
   - "太田遥月"
   - "山田響己"
 description: "新宿眼科画廊スペースOで開催した、アーティストグループ whh!（wax/hazu/hy!）の結成的展示。新型コロナウイルスという「緩慢な災害」からの復興を、顔・接続詞・内臓・反転・空虚なインスタレーションを通じて問い直した。"
+cover: "/exhibition_image/conjunction/main.jpeg"
+images:
+  - src: "/exhibition_image/conjunction/3F52CAD1-B8D1-4A8C-9516-A2769A77BB46.jpeg"
+    alt: "展示風景"
+  - src: "/exhibition_image/conjunction/4F893FA9-32CE-4679-B403-21777D68467B.jpeg"
+    alt: "展示風景"
+  - src: "/exhibition_image/conjunction/81c92ae7-f079-4a17-aa2e-e48bead153f0-2.jpg"
+    alt: "展示風景"
+  - src: "/exhibition_image/conjunction/8C2305A4-D465-46DD-B109-5A354D10AC59.jpeg"
+    alt: "展示風景"
+  - src: "/exhibition_image/conjunction/9a514e9e-8288-4c18-9766-d5d4a27c5049.jpg"
+    alt: "展示風景"
 links: []
 press:
   - title: "（ . . . ）³ cubed of conjunction（新宿眼科画廊 スペースO）"

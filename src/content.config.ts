@@ -48,6 +48,14 @@ const exhibitions = defineCollection({
         })
       )
       .default([]),
+    videos: z
+      .array(
+        z.object({
+          src: z.string(),
+          caption: z.string().optional(),
+        })
+      )
+      .default([]),
     links: z
       .array(z.object({ label: z.string(), url: z.string() }))
       .default([]),

@@ -30,6 +30,13 @@ artists:
   - "鷲見友佑"
   - "村松珠季"
 description: "横浜市民ギャラリー地下1階で開催した、waxogawaと李静文によるキュレーション展。東京というアートパワーの中心地からの「漂流」を試み、20名の若手作家による星座を公共施設の地下空間に仮設した。"
+images:
+  - src: "/exhibition_image/yokohama/P1000187%E3%81%AE%E3%82%B3%E3%83%94%E3%83%BC.JPG"
+    alt: "展示風景"
+  - src: "/exhibition_image/yokohama/P1000321%E3%81%AE%E3%82%B3%E3%83%94%E3%83%BC.JPG"
+    alt: "展示風景"
+  - src: "/exhibition_image/yokohama/P1000322%E3%81%AE%E3%82%B3%E3%83%94%E3%83%BC.JPG"
+    alt: "展示風景"
 links:
   - label: "李静文 公式サイト"
     url: "https://lijingwen.icu/Information"

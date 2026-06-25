@@ -126,6 +126,23 @@ function formatDateRange(start: Date, end?: Date): string {
     </div>
   )}
 
+  <!-- 6b. Video gallery (wider) -->
+  {d.videos.length > 0 && (
+    <div class="exh-gallery-section">
+      <p class="exh-section-label">Videos</p>
+      <div class="exh-gallery-grid">
+        {d.videos.map((vid) => (
+          <figure class="exh-gallery-item">
+            <video src={vid.src} controls preload="metadata" class="exh-video" />
+            {vid.caption && (
+              <figcaption class="exh-gallery-caption">{vid.caption}</figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+    </div>
+  )}
+
   <!-- 7. Links / 8. Press / 9. Instagram / 10. Related -->
   <div class="exh-narrow">
 
@@ -279,6 +296,11 @@ function formatDateRange(start: Date, end?: Date): string {
 
   .exh-gallery-item img {
     cursor: zoom-in;
+  }
+
+  .exh-video {
+    display: block;
+    width: 100%;
   }
 
   .exh-lightbox {
