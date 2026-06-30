@@ -222,6 +222,8 @@ if (svg && container && popup) {
   let dragOffsetY     = 0;
   const DRAG_PX = 5;
 
+  let mouse = { x: null, y: null };
+
   function rnd(min, max) { return Math.random() * (max - min) + min; }
 
   // SVG element coordinates = client coordinates when container is fixed inset:0
@@ -277,11 +279,14 @@ if (svg && container && popup) {
       nodes.forEach((t, i) => {
         const angle = (Math.PI * 2 * i / nodes.length) + rnd(-0.28, 0.28);
         pos[t.id] = {
-          bx: cx + Math.cos(angle) * rx * rnd(0.82, 1.18),
-          by: cy + Math.sin(angle) * ry * rnd(0.82, 1.18),
-          px: rnd(0, Math.PI * 2), py: rnd(0, Math.PI * 2),
-          ax: rnd(1.5, 3.5),       ay: rnd(1.5, 3.5),
-          sx: rnd(0.00010, 0.00025), sy: rnd(0.00010, 0.00025),
+          bx:  cx + Math.cos(angle) * rx * rnd(0.82, 1.18),
+          by:  cy + Math.sin(angle) * ry * rnd(0.82, 1.18),
+          px:  rnd(0, Math.PI * 2), py:  rnd(0, Math.PI * 2),
+          px2: rnd(0, Math.PI * 2), py2: rnd(0, Math.PI * 2),
+          ax:  rnd(8, 18),           ay:  rnd(6, 14),
+          ax2: rnd(2, 6),            ay2: rnd(2, 5),
+          sx:  rnd(0.000025, 0.000055), sy:  rnd(0.000020, 0.000050),
+          sx2: rnd(0.000010, 0.000026), sy2: rnd(0.000012, 0.000030),
         };
         cur[t.id] = { x: pos[t.id].bx, y: pos[t.id].by };
       });
@@ -297,7 +302,7 @@ if (svg && container && popup) {
       el.setAttribute("stroke",       BLUE);
       el.setAttribute("fill",         "none");
       el.setAttribute("stroke-width", "0.7");
-      el.setAttribute("opacity",      "0.28");
+      el.setAttribute("opacity",      "0.18");
       el.style.pointerEvents = "none";
       svg.appendChild(el);
       lineEls[`${src}-${tgt}`] = el;
@@ -335,6 +340,34 @@ if (svg && container && popup) {
       textEl.appendChild(sp2);
       svg.appendChild(textEl);
       nodeEls[t.id] = textEl;
+
+      // Hover: highlight node and its connected lines
+      textEl.addEventListener("mouseenter", () => {
+        textEl.setAttribute("opacity", "1");
+        textEl.setAttribute("font-weight", "500");
+        LINKS.forEach(([src, tgt]) => {
+          if (src === t.id || tgt === t.id) {
+            const line = lineEls[`${src}-${tgt}`];
+            if (line) {
+              line.setAttribute("opacity", "0.42");
+              line.setAttribute("stroke-width", "0.9");
+            }
+          }
+        });
+      });
+      textEl.addEventListener("mouseleave", () => {
+        textEl.setAttribute("opacity", String(LAYER.opacity[t.layer]));
+        textEl.setAttribute("font-weight", "400");
+        LINKS.forEach(([src, tgt]) => {
+          if (src === t.id || tgt === t.id) {
+            const line = lineEls[`${src}-${tgt}`];
+            if (line) {
+              line.setAttribute("opacity", "0.18");
+              line.setAttribute("stroke-width", "0.7");
+            }
+          }
+        });
+      });
     });
 
     cancelAnimationFrame(rafId);
@@ -355,9 +388,27 @@ if (svg && container && popup) {
       if (t.id === draggingId) {
         x = p.bx; y = p.by;
       } else {
-        x = p.bx + Math.sin(elapsed * p.sx + p.px) * p.ax;
-        y = p.by + Math.cos(elapsed * p.sy + p.py) * p.ay;
+        x = p.bx
+          + Math.sin(elapsed * p.sx  + p.px)  * p.ax
+          + Math.sin(elapsed * p.sx2 + p.px2) * p.ax2;
+        y = p.by
+          + Math.cos(elapsed * p.sy  + p.py)  * p.ay
+          + Math.sin(elapsed * p.sy2 + p.py2) * p.ay2;
+
+        // Gently attract nodes toward cursor when nearby
+        if (mouse.x !== null) {
+          const dx   = mouse.x - x;
+          const dy   = mouse.y - y;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const radius = 120;
+          if (dist < radius) {
+            const force = (1 - dist / radius) * 8;
+            x += (dx / dist) * force;
+            y += (dy / dist) * force;
+          }
+        }
       }
+
       cur[t.id] = { x, y };
       el.setAttribute("x", x);
       el.setAttribute("y", y);
@@ -448,6 +499,7 @@ if (svg && container && popup) {
   });
 
   document.addEventListener("pointermove", e => {
+    mouse = svgCoords(e.clientX, e.clientY);
     if (!draggingId || !dragStartClient) return;
     const dx = e.clientX - dragStartClient.x;
     const dy = e.clientY - dragStartClient.y;
