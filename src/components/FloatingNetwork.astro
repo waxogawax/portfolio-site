@@ -114,8 +114,18 @@
 <script>
 // All SVG element styles set directly in JS — Astro scoped CSS does not
 // reach dynamically created elements (no data-astro-cid-* attribute).
+//
+// Physics model: Kuramoto phase-synchronization × mycelial edge growth × semantic
+// repulsion. Each term is an oscillator (theta, omega). A graph-derived similarity
+// S[i][j] (shared links + shared neighbours + layer proximity) drives three things:
+//   - Kuramoto coupling sign/strength (close terms pull into phase, far terms push apart)
+//   - mycelium edge weight A[i][j], which grows where terms are close in phase and
+//     space, decays otherwise, and occasionally seeds new exploratory threads
+//   - spatial repulsion, keeping semantically distant terms apart
+// Drag/click/popup navigation is unchanged from the previous implementation.
 
 const BLUE = "#0000ff";
+const TAU  = Math.PI * 2;
 
 const LAYER = {
   fontSize: ["13px", "10.5px", "8.5px"],
@@ -200,6 +210,59 @@ const TERM_PAGES = {
   accessibility:["/research/",    "/exhibitions/", "/works/"],
 };
 
+// ── Kuramoto × mycelium × repulsion parameters ────────────
+const K         = 0.42;  // Kuramoto coupling gain
+const NEG_SYNC  = 0.55;  // negative coupling strength for semantically distant pairs
+const ALPHA     = 0.012; // mycelium growth rate
+const BETA      = 0.032; // mycelium decay rate
+const GAMMA     = 0.032; // phase-sync reinforcement of edge weight
+const DRIFT     = 0.43;  // drift speed
+const REPULSION = 0.9;   // semantic repulsion strength
+
+// ── Graph-derived semantic similarity matrix ──────────────
+const ids      = TERMS.map(t => t.id);
+const N        = ids.length;
+const idIndex  = Object.fromEntries(ids.map((id, i) => [id, i]));
+
+const neighborSets = ids.map(() => new Set());
+LINKS.forEach(([a, b]) => {
+  neighborSets[idIndex[a]].add(idIndex[b]);
+  neighborSets[idIndex[b]].add(idIndex[a]);
+});
+
+function jaccard(setA, setB) {
+  if (setA.size === 0 && setB.size === 0) return 0;
+  let inter = 0;
+  setA.forEach(v => { if (setB.has(v)) inter++; });
+  const union = setA.size + setB.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+const S = Array.from({ length: N }, () => new Array(N).fill(0));
+for (let i = 0; i < N; i++) {
+  S[i][i] = 1;
+  for (let j = i + 1; j < N; j++) {
+    const linked = neighborSets[i].has(j);
+    const jac    = jaccard(neighborSets[i], neighborSets[j]);
+    let s = linked ? 0.80 : jac * 0.62;
+    const layerDiff = Math.abs(TERMS[i].layer - TERMS[j].layer);
+    s += layerDiff === 0 ? 0.05 : layerDiff === 2 ? -0.05 : 0;
+    s = Math.max(0, Math.min(1, s));
+    S[i][j] = S[j][i] = s;
+  }
+}
+
+// Mycelium edge-weight matrix, seeded from the curated LINKS and left free to
+// grow, decay, and occasionally sprout new threads between synced terms.
+const A = Array.from({ length: N }, () => new Array(N).fill(0));
+function seedMycelium() {
+  for (const row of A) row.fill(0);
+  LINKS.forEach(([a, b]) => {
+    const i = idIndex[a], j = idIndex[b];
+    A[i][j] = A[j][i] = 0.34 + Math.random() * 0.08;
+  });
+}
+
 // ── DOM refs ─────────────────────────────────────────────
 const svg      = document.getElementById("network-svg");
 const container= document.getElementById("floating-network");
@@ -209,12 +272,13 @@ const popLinks = document.getElementById("term-popup-links");
 const popClose = document.getElementById("term-popup-close");
 
 if (svg && container && popup) {
-  const pos     = {};
-  const cur     = {};
+  const state   = {}; // per-term physics state: bx,by (home anchor), x,y,vx,vy,theta,omega
   const nodeEls = {};
-  const lineEls = {};
-  let rafId = 0, startTime = 0;
+  let lines = []; // { i, j, el }
+  let rafId = 0;
   let W = 0, H = 0;
+  let lambda = 200;
+  let hoveredId = null;
 
   let draggingId      = null;
   let dragStartClient = null;
@@ -252,12 +316,11 @@ if (svg && container && popup) {
   function build() {
     W = container.clientWidth  || window.innerWidth;
     H = container.clientHeight || window.innerHeight;
+    lambda = Math.min(W, H) * 0.22;
 
     svg.innerHTML = "";
     for (const k in nodeEls) delete nodeEls[k];
-    for (const k in lineEls) delete lineEls[k];
-    for (const k in pos)     delete pos[k];
-    for (const k in cur)     delete cur[k];
+    for (const k in state)   delete state[k];
 
     // Center nodes in the right portion of the viewport,
     // matching the old right:3vw / width:40vw / top:10vh / height:72vh layout.
@@ -278,45 +341,44 @@ if (svg && container && popup) {
       const { rx, ry } = rings[li];
       nodes.forEach((t, i) => {
         const angle = (Math.PI * 2 * i / nodes.length) + rnd(-0.28, 0.28);
-        pos[t.id] = {
-          bx:  cx + Math.cos(angle) * rx * rnd(0.82, 1.18),
-          by:  cy + Math.sin(angle) * ry * rnd(0.82, 1.18),
-          px:  rnd(0, Math.PI * 2), py:  rnd(0, Math.PI * 2),
-          px2: rnd(0, Math.PI * 2), py2: rnd(0, Math.PI * 2),
-          ax:  rnd(8, 18),           ay:  rnd(6, 14),
-          ax2: rnd(2, 6),            ay2: rnd(2, 5),
-          sx:  rnd(0.000025, 0.000055), sy:  rnd(0.000020, 0.000050),
-          sx2: rnd(0.000010, 0.000026), sy2: rnd(0.000012, 0.000030),
+        const bx = cx + Math.cos(angle) * rx * rnd(0.82, 1.18);
+        const by = cy + Math.sin(angle) * ry * rnd(0.82, 1.18);
+        state[t.id] = {
+          bx, by,
+          x: bx, y: by,
+          vx: 0, vy: 0,
+          theta: rnd(0, TAU),
+          omega: rnd(-0.010, 0.010),
         };
-        cur[t.id] = { x: pos[t.id].bx, y: pos[t.id].by };
       });
     });
 
-    // Lines
-    LINKS.forEach(([src, tgt]) => {
-      const ps = pos[src], pt = pos[tgt];
-      if (!ps || !pt) return;
-      const el = mkEl("line");
-      el.setAttribute("x1", ps.bx); el.setAttribute("y1", ps.by);
-      el.setAttribute("x2", pt.bx); el.setAttribute("y2", pt.by);
-      el.setAttribute("stroke",       BLUE);
-      el.setAttribute("fill",         "none");
-      el.setAttribute("stroke-width", "0.7");
-      el.setAttribute("opacity",      "0.18");
-      el.style.pointerEvents = "none";
-      svg.appendChild(el);
-      lineEls[`${src}-${tgt}`] = el;
-    });
+    seedMycelium();
+
+    // Lines: pre-create for pairs with meaningful potential similarity; weight
+    // and opacity are driven each frame by the live mycelium matrix.
+    lines = [];
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        if (S[i][j] < 0.18) continue;
+        const el = mkEl("line");
+        el.setAttribute("stroke", BLUE);
+        el.setAttribute("fill", "none");
+        el.style.pointerEvents = "none";
+        svg.appendChild(el);
+        lines.push({ i, j, el });
+      }
+    }
 
     // Text nodes
     TERMS.forEach(t => {
-      const p  = pos[t.id];
+      const n = state[t.id];
       const [en, ja] = t.label;
       const hasLink  = Boolean(TERM_PAGES[t.id]);
 
       const textEl = mkEl("text");
-      textEl.setAttribute("x",             p.bx);
-      textEl.setAttribute("y",             p.by);
+      textEl.setAttribute("x",             n.x);
+      textEl.setAttribute("y",             n.y);
       textEl.setAttribute("fill",          BLUE);
       textEl.setAttribute("opacity",       String(LAYER.opacity[t.layer]));
       textEl.setAttribute("font-size",     LAYER.fontSize[t.layer]);
@@ -328,11 +390,11 @@ if (svg && container && popup) {
       textEl.dataset.termId      = t.id;
 
       const sp1 = mkEl("tspan");
-      sp1.setAttribute("x", p.bx); sp1.setAttribute("dy", "-0.65em");
+      sp1.setAttribute("x", n.x); sp1.setAttribute("dy", "-0.65em");
       sp1.textContent = en;
 
       const sp2 = mkEl("tspan");
-      sp2.setAttribute("x", p.bx); sp2.setAttribute("dy", "1.35em");
+      sp2.setAttribute("x", n.x); sp2.setAttribute("dy", "1.35em");
       sp2.setAttribute("font-size", "0.93em");
       sp2.textContent = ja;
 
@@ -341,87 +403,189 @@ if (svg && container && popup) {
       svg.appendChild(textEl);
       nodeEls[t.id] = textEl;
 
-      // Hover: highlight node and its connected lines
-      textEl.addEventListener("mouseenter", () => {
-        textEl.setAttribute("opacity", "1");
-        textEl.setAttribute("font-weight", "500");
-        LINKS.forEach(([src, tgt]) => {
-          if (src === t.id || tgt === t.id) {
-            const line = lineEls[`${src}-${tgt}`];
-            if (line) {
-              line.setAttribute("opacity", "0.42");
-              line.setAttribute("stroke-width", "0.9");
-            }
-          }
-        });
-      });
-      textEl.addEventListener("mouseleave", () => {
-        textEl.setAttribute("opacity", String(LAYER.opacity[t.layer]));
-        textEl.setAttribute("font-weight", "400");
-        LINKS.forEach(([src, tgt]) => {
-          if (src === t.id || tgt === t.id) {
-            const line = lineEls[`${src}-${tgt}`];
-            if (line) {
-              line.setAttribute("opacity", "0.18");
-              line.setAttribute("stroke-width", "0.7");
-            }
-          }
-        });
-      });
+      // Hover: highlight this node; connected mycelium threads are boosted
+      // per-frame in the render loop (see below).
+      textEl.addEventListener("mouseenter", () => { hoveredId = t.id; });
+      textEl.addEventListener("mouseleave", () => { hoveredId = null; });
     });
 
     cancelAnimationFrame(rafId);
-    startTime = 0;
     rafId = requestAnimationFrame(animate);
   }
 
-  // ── Animate ──────────────────────────────────────────────
-  function animate(timestamp) {
-    if (!startTime) startTime = timestamp;
-    const elapsed = timestamp - startTime;
+  // ── Kuramoto phase step ───────────────────────────────────
+  function stepKuramoto() {
+    const nextTheta = {};
+    for (let i = 0; i < N; i++) {
+      const a = state[ids[i]];
+      let coupling = 0;
+      for (let j = 0; j < N; j++) {
+        if (i === j) continue;
+        const b = state[ids[j]];
+        const s = S[i][j];
 
-    TERMS.forEach(t => {
-      const p = pos[t.id], el = nodeEls[t.id];
-      if (!p || !el) return;
+        // Semantically close terms couple positively; distant terms couple
+        // weakly negatively, so they also drift out of phase.
+        const signed = s >= 0.48 ? s : -NEG_SYNC * Math.pow(0.48 - s, 1.2);
+        const edge   = A[i][j] * s;
+        const base   = 0.02 * signed;
 
-      let x, y;
-      if (t.id === draggingId) {
-        x = p.bx; y = p.by;
-      } else {
-        x = p.bx
-          + Math.sin(elapsed * p.sx  + p.px)  * p.ax
-          + Math.sin(elapsed * p.sx2 + p.px2) * p.ax2;
-        y = p.by
-          + Math.cos(elapsed * p.sy  + p.py)  * p.ay
-          + Math.sin(elapsed * p.sy2 + p.py2) * p.ay2;
+        coupling += (edge + base) * Math.sin(b.theta - a.theta);
+      }
+      nextTheta[ids[i]] = a.theta + a.omega + K * 0.02 * coupling;
+    }
+    for (const id of ids) {
+      state[id].theta = ((nextTheta[id] % TAU) + TAU) % TAU;
+    }
+  }
 
-        // Gently attract nodes toward cursor when nearby
-        if (mouse.x !== null) {
-          const dx   = mouse.x - x;
-          const dy   = mouse.y - y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const radius = 120;
-          if (dist < radius) {
-            const force = (1 - dist / radius) * 8;
-            x += (dx / dist) * force;
-            y += (dy / dist) * force;
-          }
+  // ── Mycelium edge growth / decay / exploration ────────────
+  function updateMycelium() {
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        const s = S[i][j];
+        if (s < 0.12 && A[i][j] < 0.02) continue;
+
+        const a = state[ids[i]], b = state[ids[j]];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d  = Math.hypot(dx, dy);
+        const semanticDistance = 1 - s;
+
+        const spatialGrowth = Math.exp(-d / lambda);
+        const G = spatialGrowth * Math.pow(s, 1.7);
+        const phaseAlignment = (1 + Math.cos(b.theta - a.theta)) * 0.5;
+
+        let next = A[i][j]
+          + ALPHA * G
+          + GAMMA * A[i][j] * (phaseAlignment - 0.42) * (0.30 + 0.90 * s)
+          - BETA * A[i][j]
+          - 0.015 * semanticDistance * A[i][j];
+
+        if (s < 0.4) next -= BETA * (0.5 + semanticDistance);
+
+        // Exploratory growth: an occasional new thread between terms that are
+        // close in phase and meaning, even without a curated link.
+        if (d < lambda * 1.5 && s > 0.5 && Math.random() < 0.0004) {
+          next += 0.05 * Math.random() * s;
+        }
+        if (d > lambda * 2.1) next -= BETA * 1.3;
+
+        next = Math.max(0, Math.min(1, next));
+        A[i][j] = A[j][i] = next;
+      }
+    }
+  }
+
+  // ── Position integration: drift + home spring + mycelium pull + repulsion ──
+  function updatePositions() {
+    for (let i = 0; i < N; i++) {
+      const id = ids[i];
+      const n = state[id];
+      if (id === draggingId) continue; // driven directly by pointer while dragging
+
+      let ax = Math.cos(n.theta) * 0.0032 * DRIFT;
+      let ay = Math.sin(n.theta) * 0.0032 * DRIFT;
+
+      // weak return-to-home spring keeps the cloud within its ring region
+      ax += (n.bx - n.x) * 0.00007;
+      ay += (n.by - n.y) * 0.00007;
+
+      for (let j = 0; j < N; j++) {
+        if (i === j) continue;
+        const m = state[ids[j]];
+        const dx = m.x - n.x, dy = m.y - n.y;
+        const d  = Math.max(1, Math.hypot(dx, dy));
+        const ux = dx / d, uy = dy / d;
+
+        const s = S[i][j];
+        const semanticDistance = 1 - s;
+        const edge = A[i][j];
+
+        // mycelial tension: strong, semantically close edges draw gently together
+        ax += ux * edge * s * 0.0009;
+        ay += uy * edge * s * 0.0009;
+
+        // semantic repulsion: distant terms push apart at close-to-mid range
+        const repulsionRange = 60 + lambda * 0.6;
+        if (d < repulsionRange) {
+          const rangeFactor   = Math.pow(1 - d / repulsionRange, 1.25);
+          const semanticRepel = Math.pow(Math.max(0, semanticDistance - 0.35), 1.3);
+          const force = REPULSION * semanticRepel * rangeFactor * 0.018;
+          ax -= ux * force;
+          ay -= uy * force;
+        }
+
+        // local repulsion to prevent label overlap
+        if (d < 46) {
+          const push = (46 - d) / 46;
+          ax -= ux * push * 0.006;
+          ay -= uy * push * 0.006;
         }
       }
 
-      cur[t.id] = { x, y };
-      el.setAttribute("x", x);
-      el.setAttribute("y", y);
-      el.querySelectorAll("tspan").forEach(sp => sp.setAttribute("x", x));
+      if (mouse.x !== null) {
+        const dx = mouse.x - n.x, dy = mouse.y - n.y;
+        const d  = Math.max(1, Math.hypot(dx, dy));
+        const radius = 130;
+        if (d < radius) {
+          const force = (1 - d / radius) * 0.05;
+          ax += (dx / d) * force;
+          ay += (dy / d) * force;
+        }
+      }
+
+      n.vx = (n.vx + ax) * 0.965;
+      n.vy = (n.vy + ay) * 0.965;
+
+      const maxV = 0.55 + DRIFT * 0.5;
+      const speed = Math.hypot(n.vx, n.vy);
+      if (speed > maxV) {
+        n.vx = (n.vx / speed) * maxV;
+        n.vy = (n.vy / speed) * maxV;
+      }
+
+      n.x += n.vx;
+      n.y += n.vy;
+    }
+  }
+
+  // ── Animate ──────────────────────────────────────────────
+  function animate() {
+    stepKuramoto();
+    updateMycelium();
+    updatePositions();
+
+    TERMS.forEach(t => {
+      const n  = state[t.id];
+      const el = nodeEls[t.id];
+      if (!n || !el) return;
+
+      const hovered = t.id === hoveredId;
+      const pulse   = 0.85 + 0.15 * ((1 + Math.cos(n.theta)) * 0.5);
+
+      el.setAttribute("x", n.x);
+      el.setAttribute("y", n.y);
+      el.setAttribute("opacity", hovered ? "1" : String(LAYER.opacity[t.layer] * pulse));
+      el.setAttribute("font-weight", hovered ? "500" : "400");
+      el.querySelectorAll("tspan").forEach(sp => sp.setAttribute("x", n.x));
     });
 
-    LINKS.forEach(([src, tgt]) => {
-      const ps = cur[src], pt = cur[tgt], el = lineEls[`${src}-${tgt}`];
-      if (ps && pt && el) {
-        el.setAttribute("x1", ps.x); el.setAttribute("y1", ps.y);
-        el.setAttribute("x2", pt.x); el.setAttribute("y2", pt.y);
-      }
-    });
+    for (const line of lines) {
+      const { i, j, el } = line;
+      const a = state[ids[i]], b = state[ids[j]];
+      const s = S[i][j];
+      const weight = A[i][j];
+
+      el.setAttribute("x1", a.x); el.setAttribute("y1", a.y);
+      el.setAttribute("x2", b.x); el.setAttribute("y2", b.y);
+
+      const hovered = hoveredId !== null && (ids[i] === hoveredId || ids[j] === hoveredId);
+      const baseOpacity = Math.min(0.50, weight * 0.55 * (0.35 + s));
+      const baseWidth   = 0.35 + Math.pow(weight, 1.5) * 3.2 * (0.4 + s);
+
+      el.setAttribute("opacity",      String(hovered ? Math.max(baseOpacity, 0.40) : baseOpacity));
+      el.setAttribute("stroke-width", String(hovered ? Math.max(baseWidth, 0.85)   : baseWidth));
+    }
 
     rafId = requestAnimationFrame(animate);
   }
@@ -472,7 +636,7 @@ if (svg && container && popup) {
     const linkable = TERMS.filter(t => TERM_PAGES[t.id]?.length > 0);
     if (!linkable.length) return;
     const term = linkable[Math.floor(Math.random() * linkable.length)];
-    const node = cur[term.id];
+    const node = state[term.id];
     if (!node) return;
     const { x, y } = svgToClient(node.x, node.y);
     showPopup(term.id, x, y);
@@ -486,15 +650,15 @@ if (svg && container && popup) {
 
     const textEl = e.target.closest ? e.target.closest("[data-term-id]") : null;
     const id     = textEl?.dataset?.termId;
-    if (!id || !cur[id]) return;
+    if (!id || !state[id]) return;
 
     draggingId      = id;
     dragStartClient = { x: e.clientX, y: e.clientY };
     textEl.style.cursor = "grabbing";
 
     const svgP  = svgCoords(e.clientX, e.clientY);
-    dragOffsetX = svgP.x - cur[id].x;
-    dragOffsetY = svgP.y - cur[id].y;
+    dragOffsetX = svgP.x - state[id].x;
+    dragOffsetY = svgP.y - state[id].y;
     e.preventDefault();
   });
 
@@ -505,8 +669,10 @@ if (svg && container && popup) {
     const dy = e.clientY - dragStartClient.y;
     if (Math.sqrt(dx * dx + dy * dy) < DRAG_PX) return;
     const { x, y } = svgCoords(e.clientX, e.clientY);
-    pos[draggingId].bx = x - dragOffsetX;
-    pos[draggingId].by = y - dragOffsetY;
+    const n = state[draggingId];
+    n.x = x - dragOffsetX;
+    n.y = y - dragOffsetY;
+    n.vx = 0; n.vy = 0;
   });
 
   document.addEventListener("pointerup", e => {
@@ -517,8 +683,9 @@ if (svg && container && popup) {
     const wasDrag = Math.sqrt(dx * dx + dy * dy) >= DRAG_PX;
 
     if (nodeEls[id]) nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
-    pos[id].bx      = cur[id].x;
-    pos[id].by      = cur[id].y;
+    // anchor the home spring to the dropped location so it doesn't snap back
+    state[id].bx    = state[id].x;
+    state[id].by    = state[id].y;
     draggingId      = null;
     dragStartClient = null;
 

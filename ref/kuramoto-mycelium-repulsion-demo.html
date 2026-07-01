@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Kuramoto × Mycelium × Repulsion Demo</title>
+  <style>
+    :root {
+      --bg: #f4f2ea;
+      --ink: #1d1d1b;
+      --panel: rgba(244, 242, 234, 0.78);
+      --border: rgba(29, 29, 27, 0.14);
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,0.72), transparent 34%),
+        radial-gradient(circle at 70% 72%, rgba(180,180,160,0.18), transparent 42%),
+        var(--bg);
+      font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Hiragino Sans",
+        "Yu Gothic",
+        sans-serif;
+      color: var(--ink);
+    }
+
+    canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+
+    .panel {
+      position: fixed;
+      left: 20px;
+      top: 20px;
+      width: min(410px, calc(100vw - 40px));
+      padding: 16px 16px 14px;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.06);
+      z-index: 2;
+    }
+
+    .panel h1 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      letter-spacing: 0.02em;
+      font-weight: 680;
+    }
+
+    .panel p {
+      margin: 0 0 12px;
+      font-size: 12px;
+      line-height: 1.65;
+      opacity: 0.76;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      grid-template-columns: 150px 1fr 48px;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+      opacity: 0.86;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #272724;
+    }
+
+    output {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.72;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 1px solid rgba(29,29,27,0.18);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.38);
+      padding: 7px 11px;
+      font-size: 12px;
+      cursor: pointer;
+      color: var(--ink);
+    }
+
+    button:hover {
+      background: rgba(255,255,255,0.7);
+    }
+
+    .legend {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      max-width: min(520px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(244, 242, 234, 0.68);
+      backdrop-filter: blur(12px);
+      z-index: 2;
+      font-size: 11px;
+      line-height: 1.6;
+      opacity: 0.78;
+    }
+
+    .legend strong {
+      font-weight: 680;
+    }
+
+    @media (max-width: 720px) {
+      .panel {
+        left: 12px;
+        top: 12px;
+        padding: 13px;
+      }
+
+      label {
+        grid-template-columns: 128px 1fr 42px;
+      }
+
+      .legend {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="field" aria-hidden="true"></canvas>
+
+  <section class="panel">
+    <h1>Kuramoto × Mycelium × Repulsion</h1>
+    <p>
+      語句ノードは固有リズムを持ちます。意味的に近い語は同期しやすく、接続が菌糸のように太くなります。
+      意味的に遠い語は負の結合を持ち、互いに排斥します。
+    </p>
+
+    <div class="controls">
+      <label>
+        同期結合 K
+        <input id="k" type="range" min="0" max="3" value="0.40" step="0.01">
+        <output id="kOut">0.40</output>
+      </label>
+
+      <label>
+        菌糸成長 α
+        <input id="alpha" type="range" min="0" max="0.08" value="0.010" step="0.001">
+        <output id="alphaOut">.010</output>
+      </label>
+
+      <label>
+        枯れ β
+        <input id="beta" type="range" min="0" max="0.08" value="0.042" step="0.001">
+        <output id="betaOut">.042</output>
+      </label>
+
+      <label>
+        同期補強 γ
+        <input id="gamma" type="range" min="0" max="0.12" value="0.034" step="0.001">
+        <output id="gammaOut">.034</output>
+      </label>
+
+      <label>
+        距離スケール λ
+        <input id="lambda" type="range" min="70" max="520" value="372" step="1">
+        <output id="lambdaOut">372</output>
+      </label>
+
+      <label>
+        漂流速度
+        <input id="drift" type="range" min="0" max="1.8" value="1.47" step="0.01">
+        <output id="driftOut">1.47</output>
+      </label>
+
+      <label>
+        意味反発 ρ
+        <input id="repulsion" type="range" min="0" max="2.8" value="1.15" step="0.01">
+        <output id="repulsionOut">1.15</output>
+      </label>
+
+      <label>
+        負の同期 η
+        <input id="negSync" type="range" min="0" max="2.4" value="0.72" step="0.01">
+        <output id="negSyncOut">0.72</output>
+      </label>
+
+      <label>
+        排斥線の表示
+        <input id="showRepulsion" type="range" min="0" max="1" value="1" step="1">
+        <output id="showRepulsionOut">on</output>
+      </label>
+    </div>
+
+    <div class="buttons">
+      <button id="reset">reset network</button>
+      <button id="scatter">scatter nodes</button>
+      <button id="semantic">semantic layout</button>
+    </div>
+  </section>
+
+  <div class="legend">
+    <strong>更新式の感覚：</strong>
+    \(A_{ij}\) は近接・同期・意味類似で太くなり、時間で枯れます。
+    \(R_{ij}=1-S_{ij}\) は意味的距離を表し、遠い語同士を押し返します。
+    Kuramoto結合も、意味的に近い語は正、遠い語は弱い負の結合として働きます。
+  </div>
+
+  <script>
+    const canvas = document.getElementById("field");
+    const ctx = canvas.getContext("2d", { alpha: true });
+
+    const controls = {
+      k: document.getElementById("k"),
+      alpha: document.getElementById("alpha"),
+      beta: document.getElementById("beta"),
+      gamma: document.getElementById("gamma"),
+      lambda: document.getElementById("lambda"),
+      drift: document.getElementById("drift"),
+      repulsion: document.getElementById("repulsion"),
+      negSync: document.getElementById("negSync"),
+      showRepulsion: document.getElementById("showRepulsion")
+    };
+
+    const outputs = {
+      k: document.getElementById("kOut"),
+      alpha: document.getElementById("alphaOut"),
+      beta: document.getElementById("betaOut"),
+      gamma: document.getElementById("gammaOut"),
+      lambda: document.getElementById("lambdaOut"),
+      drift: document.getElementById("driftOut"),
+      repulsion: document.getElementById("repulsionOut"),
+      negSync: document.getElementById("negSyncOut"),
+      showRepulsion: document.getElementById("showRepulsionOut")
+    };
+
+    /*
+      tag は簡易的な「意味ベクトル」です。
+      実運用では、ここを共起語・手動カテゴリ・埋め込みベクトルに置き換えられます。
+      [care, disaster, curation, theory, place, institution, rhythm, archive]
+    */
+    const nodeData = [
+      { label: "care",              tag: [1.00, .45, .20, .25, .55, .25, .50, .15] },
+      { label: "unpaid",            tag: [.95, .38, .10, .35, .40, .70, .25, .08] },
+      { label: "fieldnote",         tag: [.55, .30, .45, .85, .35, .15, .25, .55] },
+      { label: "weak sign",         tag: [.90, .55, .15, .55, .48, .10, .65, .10] },
+      { label: "Noto",              tag: [.55, .85, .12, .20, 1.00, .20, .55, .22] },
+      { label: "disaster",          tag: [.62, 1.00, .05, .30, .78, .55, .20, .15] },
+      { label: "curation",          tag: [.20, .15, 1.00, .55, .20, .55, .30, .75] },
+      { label: "anthropology",      tag: [.35, .30, .50, 1.00, .45, .20, .25, .35] },
+      { label: "translation",       tag: [.35, .25, .55, .90, .35, .30, .20, .35] },
+      { label: "network",           tag: [.35, .30, .45, .65, .25, .40, .35, .20] },
+      { label: "rhythm",            tag: [.50, .20, .20, .30, .45, .10, 1.00, .10] },
+      { label: "festival",          tag: [.50, .35, .40, .25, .78, .10, .92, .25] },
+      { label: "boundary object",   tag: [.55, .45, .40, .75, .50, .50, .20, .25] },
+      { label: "matter of care",    tag: [1.00, .35, .25, .65, .30, .20, .30, .15] },
+      { label: "Serbia",            tag: [.15, .45, .65, .30, .95, .35, .18, .45] },
+      { label: "MoCAB",             tag: [.10, .30, .95, .25, .75, .60, .15, .70] },
+      { label: "ethnography",       tag: [.45, .35, .45, 1.00, .48, .15, .20, .40] },
+      { label: "mycelium",          tag: [.65, .20, .18, .55, .35, .05, .55, .08] },
+      { label: "response velocity", tag: [.88, .75, .12, .40, .42, .35, .75, .05] },
+      { label: "archive",           tag: [.10, .20, .80, .45, .30, .65, .08, 1.00] },
+      { label: "neglect",           tag: [.85, .70, .08, .35, .35, .45, .20, .05] },
+      { label: "locality",          tag: [.50, .55, .18, .25, 1.00, .15, .45, .18] },
+      { label: "institution",       tag: [.20, .45, .65, .25, .22, 1.00, .05, .45] },
+      { label: "improvisation",     tag: [.55, .45, .50, .30, .42, .08, .78, .12] }
+    ];
+
+    const labels = nodeData.map(d => d.label);
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let nodes = [];
+    let A = [];
+    let S = [];
+    let mouse = { x: 0, y: 0, active: false };
+
+    const TAU = Math.PI * 2;
+
+    function dot(a, b) {
+      let v = 0;
+      for (let i = 0; i < a.length; i++) v += a[i] * b[i];
+      return v;
+    }
+
+    function norm(a) {
+      return Math.sqrt(dot(a, a));
+    }
+
+    function cosineSimilarity(a, b) {
+      return dot(a, b) / Math.max(0.0001, norm(a) * norm(b));
+    }
+
+    function buildSemanticMatrix() {
+      S = Array.from({ length: labels.length }, () =>
+        Array.from({ length: labels.length }, () => 0)
+      );
+
+      for (let i = 0; i < labels.length; i++) {
+        for (let j = 0; j < labels.length; j++) {
+          if (i === j) {
+            S[i][j] = 1;
+          } else {
+            const raw = cosineSimilarity(nodeData[i].tag, nodeData[j].tag);
+            // 少しコントラストを強める。
+            S[i][j] = Math.max(0, Math.min(1, Math.pow(raw, 1.35)));
+          }
+        }
+      }
+    }
+
+    function params() {
+      return {
+        K: Number(controls.k.value),
+        alpha: Number(controls.alpha.value),
+        beta: Number(controls.beta.value),
+        gamma: Number(controls.gamma.value),
+        lambda: Number(controls.lambda.value),
+        drift: Number(controls.drift.value),
+        repulsion: Number(controls.repulsion.value),
+        negSync: Number(controls.negSync.value),
+        showRepulsion: Number(controls.showRepulsion.value) > 0
+      };
+    }
+
+    function syncOutputs() {
+      outputs.k.textContent = Number(controls.k.value).toFixed(2);
+      outputs.alpha.textContent = Number(controls.alpha.value).toFixed(3).replace(/^0/, "");
+      outputs.beta.textContent = Number(controls.beta.value).toFixed(3).replace(/^0/, "");
+      outputs.gamma.textContent = Number(controls.gamma.value).toFixed(3).replace(/^0/, "");
+      outputs.lambda.textContent = Math.round(Number(controls.lambda.value));
+      outputs.drift.textContent = Number(controls.drift.value).toFixed(2);
+      outputs.repulsion.textContent = Number(controls.repulsion.value).toFixed(2);
+      outputs.negSync.textContent = Number(controls.negSync.value).toFixed(2);
+      outputs.showRepulsion.textContent = Number(controls.showRepulsion.value) > 0 ? "on" : "off";
+    }
+
+    for (const input of Object.values(controls)) {
+      input.addEventListener("input", syncOutputs);
+    }
+    syncOutputs();
+
+    function resize() {
+      dpr = window.devicePixelRatio || 1;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      canvas.style.width = width + "px";
+      canvas.style.height = height + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      if (nodes.length === 0) {
+        initNodes();
+      } else {
+        for (const n of nodes) {
+          n.x = Math.max(40, Math.min(width - 40, n.x));
+          n.y = Math.max(40, Math.min(height - 40, n.y));
+        }
+      }
+    }
+
+    window.addEventListener("resize", resize);
+
+    window.addEventListener("pointermove", (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    });
+
+    window.addEventListener("pointerleave", () => {
+      mouse.active = false;
+    });
+
+    function semanticPosition(i) {
+      const d = nodeData[i].tag;
+      // x: curation/archive/institution/place vs care/disaster
+      // y: rhythm/place/care vs institution/archive/theory
+      const xScore =
+        1.10 * d[2] + 0.70 * d[7] + 0.55 * d[5] + 0.30 * d[4]
+        - 0.75 * d[0] - 0.45 * d[1];
+
+      const yScore =
+        0.75 * d[3] + 0.55 * d[5] + 0.45 * d[7]
+        - 0.75 * d[6] - 0.45 * d[4] - 0.25 * d[0];
+
+      return {
+        x: width * (0.52 + xScore * 0.16),
+        y: height * (0.53 + yScore * 0.18)
+      };
+    }
+
+    function initNodes() {
+      nodes = labels.map((label, i) => {
+        const p = semanticPosition(i);
+        return {
+          label,
+          x: p.x + (Math.random() - 0.5) * 180,
+          y: p.y + (Math.random() - 0.5) * 140,
+          tx: p.x,
+          ty: p.y,
+          vx: (Math.random() - 0.5) * 0.25,
+          vy: (Math.random() - 0.5) * 0.25,
+          theta: Math.random() * TAU,
+          omega: (Math.random() - 0.5) * 0.045,
+          mass: 0.7 + Math.random() * 0.8,
+          r: 4.5 + Math.random() * 3
+        };
+      });
+
+      resetNetwork();
+    }
+
+    function resetNetwork() {
+      A = Array.from({ length: labels.length }, () =>
+        Array.from({ length: labels.length }, () => 0)
+      );
+
+      // 意味的に近く、空間的にも近いものだけを薄く初期接続する。
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[j].x - nodes[i].x;
+          const dy = nodes[j].y - nodes[i].y;
+          const d = Math.hypot(dx, dy);
+          const s = S[i][j];
+
+          if (d < 260 && s > 0.58 && Math.random() < 0.38) {
+            A[i][j] = A[j][i] = Math.random() * 0.12 * s;
+          }
+        }
+      }
+    }
+
+    function scatterNodes() {
+      for (const n of nodes) {
+        n.x = width * (0.12 + Math.random() * 0.78);
+        n.y = height * (0.14 + Math.random() * 0.74);
+        n.vx = (Math.random() - 0.5) * 0.5;
+        n.vy = (Math.random() - 0.5) * 0.5;
+        n.theta = Math.random() * TAU;
+      }
+      resetNetwork();
+    }
+
+    function semanticLayout() {
+      for (let i = 0; i < nodes.length; i++) {
+        const p = semanticPosition(i);
+        nodes[i].x = p.x + (Math.random() - 0.5) * 70;
+        nodes[i].y = p.y + (Math.random() - 0.5) * 70;
+        nodes[i].vx = 0;
+        nodes[i].vy = 0;
+      }
+      resetNetwork();
+    }
+
+    document.getElementById("reset").addEventListener("click", resetNetwork);
+    document.getElementById("scatter").addEventListener("click", scatterNodes);
+    document.getElementById("semantic").addEventListener("click", semanticLayout);
+
+    function stepKuramoto(p) {
+      const nextTheta = new Array(nodes.length);
+
+      for (let i = 0; i < nodes.length; i++) {
+        let coupling = 0;
+
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue;
+
+          const s = S[i][j];
+
+          // 意味的に近い語は正の結合、遠い語は弱い負の結合。
+          // これにより、遠い語は位相も揃いにくくなる。
+          const signedSemanticCoupling =
+            s >= 0.48
+              ? s
+              : -p.negSync * Math.pow(0.48 - s, 1.2);
+
+          const edgeCoupling = A[i][j] * s;
+          const baseCoupling = 0.025 * signedSemanticCoupling;
+
+          coupling += (edgeCoupling + baseCoupling) * Math.sin(nodes[j].theta - nodes[i].theta);
+        }
+
+        nextTheta[i] = nodes[i].theta + nodes[i].omega + p.K * 0.018 * coupling;
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        nodes[i].theta = ((nextTheta[i] % TAU) + TAU) % TAU;
+      }
+    }
+
+    function updateNetwork(p) {
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[j].x - nodes[i].x;
+          const dy = nodes[j].y - nodes[i].y;
+          const d = Math.hypot(dx, dy);
+          const s = S[i][j];
+          const semanticDistance = 1 - s;
+
+          // 空間的に近いだけではなく、意味的に近いときだけ成長が強くなる。
+          const spatialGrowth = Math.exp(-d / p.lambda);
+          const G = spatialGrowth * Math.pow(s, 1.7);
+
+          const phaseAlignment = (1 + Math.cos(nodes[j].theta - nodes[i].theta)) * 0.5;
+
+          let next =
+            A[i][j]
+            + p.alpha * G
+            + p.gamma * A[i][j] * (phaseAlignment - 0.42) * (0.30 + 0.90 * s)
+            - p.beta * A[i][j]
+            - 0.018 * semanticDistance * A[i][j];
+
+          // 意味的に遠い接続は、空間的に近くても枯れやすい。
+          if (s < 0.42) {
+            next -= p.beta * (0.5 + semanticDistance);
+          }
+
+          // 探索的な菌糸は、意味がある程度近い場合だけ発生。
+          if (d < p.lambda * 1.55 && s > 0.52 && Math.random() < 0.00045) {
+            next += 0.06 * Math.random() * s;
+          }
+
+          if (d > p.lambda * 2.15) {
+            next -= p.beta * 1.4;
+          }
+
+          next = Math.max(0, Math.min(1, next));
+          A[i][j] = A[j][i] = next;
+        }
+      }
+    }
+
+    function updatePositions(p) {
+      for (let i = 0; i < nodes.length; i++) {
+        const n = nodes[i];
+
+        let ax = Math.cos(n.theta) * 0.006 * p.drift;
+        let ay = Math.sin(n.theta) * 0.006 * p.drift;
+
+        // 意味座標への弱い回帰。完全固定ではなく、場の中心傾向として扱う。
+        ax += (n.tx - n.x) * 0.000010;
+        ay += (n.ty - n.y) * 0.000010;
+
+        // 全体を画面中央に保つ。
+        ax += (width * 0.55 - n.x) * 0.000003;
+        ay += (height * 0.52 - n.y) * 0.000003;
+
+        for (let j = 0; j < nodes.length; j++) {
+          if (i === j) continue;
+          const m = nodes[j];
+          const dx = m.x - n.x;
+          const dy = m.y - n.y;
+          const d = Math.max(1, Math.hypot(dx, dy));
+          const ux = dx / d;
+          const uy = dy / d;
+
+          const s = S[i][j];
+          const semanticDistance = 1 - s;
+          const edge = A[i][j];
+
+          // 菌糸的張力：接続が強く、意味が近いほど軽く引き合う。
+          ax += ux * edge * s * 0.00078;
+          ay += uy * edge * s * 0.00078;
+
+          // 排斥：意味的に遠い語は中距離でも押し返す。
+          // 空間的に遠すぎる場合は弱く、近すぎる場合は強く働く。
+          const repulsionRange = 120 + p.lambda * 0.62;
+          if (d < repulsionRange) {
+            const rangeFactor = Math.pow(1 - d / repulsionRange, 1.25);
+            const semanticRepel = Math.pow(Math.max(0, semanticDistance - 0.30), 1.35);
+            const force = p.repulsion * semanticRepel * rangeFactor * 0.020;
+            ax -= ux * force;
+            ay -= uy * force;
+          }
+
+          // 文字の重なり防止としての局所排斥。
+          if (d < 88) {
+            const push = (88 - d) / 88;
+            ax -= ux * push * 0.006;
+            ay -= uy * push * 0.006;
+          }
+        }
+
+        if (mouse.active) {
+          const dx = n.x - mouse.x;
+          const dy = n.y - mouse.y;
+          const d = Math.max(1, Math.hypot(dx, dy));
+          if (d < 190) {
+            const force = (1 - d / 190) * 0.055;
+            ax += (dx / d) * force;
+            ay += (dy / d) * force;
+          }
+        }
+
+        n.vx = (n.vx + ax) * 0.985;
+        n.vy = (n.vy + ay) * 0.985;
+
+        const maxV = 1.2 + p.drift * 0.7;
+        const speed = Math.hypot(n.vx, n.vy);
+        if (speed > maxV) {
+          n.vx = (n.vx / speed) * maxV;
+          n.vy = (n.vy / speed) * maxV;
+        }
+
+        n.x += n.vx;
+        n.y += n.vy;
+
+        const margin = 28;
+        if (n.x < margin) { n.x = margin; n.vx *= -0.72; }
+        if (n.x > width - margin) { n.x = width - margin; n.vx *= -0.72; }
+        if (n.y < margin) { n.y = margin; n.vy *= -0.72; }
+        if (n.y > height - margin) { n.y = height - margin; n.vy *= -0.72; }
+      }
+    }
+
+    function drawRepulsionHints(p) {
+      if (!p.showRepulsion) return;
+
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.setLineDash([2, 7]);
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const s = S[i][j];
+          if (s > 0.34) continue;
+
+          const n = nodes[i];
+          const m = nodes[j];
+          const dx = m.x - n.x;
+          const dy = m.y - n.y;
+          const d = Math.hypot(dx, dy);
+
+          const range = 120 + p.lambda * 0.48;
+          if (d > range) continue;
+
+          const intensity = Math.pow(1 - s, 1.8) * Math.pow(1 - d / range, 1.6);
+          if (intensity < 0.055) continue;
+
+          ctx.beginPath();
+          ctx.moveTo(n.x, n.y);
+          ctx.lineTo(m.x, m.y);
+          ctx.lineWidth = 0.4 + intensity * 1.2;
+          ctx.strokeStyle = `rgba(70, 70, 64, ${Math.min(0.18, intensity * 0.22)})`;
+          ctx.stroke();
+        }
+      }
+
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    function drawEdges() {
+      ctx.save();
+      ctx.lineCap = "round";
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const a = A[i][j];
+          if (a < 0.035) continue;
+
+          const s = S[i][j];
+          const n = nodes[i];
+          const m = nodes[j];
+          const phaseAlignment = (1 + Math.cos(m.theta - n.theta)) * 0.5;
+
+          const alpha = Math.min(0.54, a * 0.66 * (0.45 + s));
+          const widthLine = 0.30 + Math.pow(a, 1.65) * 8.5 * (0.45 + s);
+
+          const mx = (n.x + m.x) * 0.5;
+          const my = (n.y + m.y) * 0.5;
+          const dx = m.x - n.x;
+          const dy = m.y - n.y;
+          const d = Math.max(1, Math.hypot(dx, dy));
+
+          const bend = Math.sin((n.theta + m.theta) * 0.5) * 18 * a;
+          const cx = mx - (dy / d) * bend;
+          const cy = my + (dx / d) * bend;
+
+          ctx.beginPath();
+          ctx.moveTo(n.x, n.y);
+          ctx.quadraticCurveTo(cx, cy, m.x, m.y);
+          ctx.lineWidth = widthLine;
+          ctx.strokeStyle = `rgba(33, 33, 28, ${alpha})`;
+          ctx.stroke();
+
+          if (phaseAlignment > 0.78 && a > 0.12) {
+            ctx.beginPath();
+            ctx.moveTo(n.x, n.y);
+            ctx.quadraticCurveTo(cx, cy, m.x, m.y);
+            ctx.lineWidth = Math.max(0.5, widthLine * 0.22);
+            ctx.strokeStyle = `rgba(255, 255, 242, ${0.12 * phaseAlignment})`;
+            ctx.stroke();
+          }
+        }
+      }
+
+      ctx.restore();
+    }
+
+    function drawNodes() {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      for (const n of nodes) {
+        const pulse = (1 + Math.sin(n.theta)) * 0.5;
+        const r = n.r + pulse * 4.8;
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r + 8, 0, TAU);
+        ctx.fillStyle = `rgba(245, 242, 218, ${0.10 + pulse * 0.16})`;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, r, 0, TAU);
+        ctx.fillStyle = `rgba(29, 29, 27, ${0.38 + pulse * 0.25})`;
+        ctx.fill();
+
+        ctx.font = `${12 + pulse * 2}px ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif`;
+        ctx.fillStyle = `rgba(29, 29, 27, ${0.56 + pulse * 0.32})`;
+        ctx.fillText(n.label, n.x, n.y - 17 - pulse * 2);
+      }
+
+      ctx.restore();
+    }
+
+    function drawFieldTexture(time) {
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      for (let i = 0; i < 80; i++) {
+        const x = (Math.sin(i * 12.989 + time * 0.00012) * 0.5 + 0.5) * width;
+        const y = (Math.sin(i * 78.233 + time * 0.00016) * 0.5 + 0.5) * height;
+        const rr = 0.8 + (i % 7) * 0.18;
+        ctx.beginPath();
+        ctx.arc(x, y, rr, 0, TAU);
+        ctx.fillStyle = "rgba(29,29,27,0.18)";
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function animate(time) {
+      const p = params();
+
+      ctx.clearRect(0, 0, width, height);
+      drawFieldTexture(time);
+
+      stepKuramoto(p);
+      updateNetwork(p);
+      updatePositions(p);
+
+      drawRepulsionHints(p);
+      drawEdges();
+      drawNodes();
+
+      requestAnimationFrame(animate);
+    }
+
+    buildSemanticMatrix();
+    resize();
+    semanticLayout();
+    requestAnimationFrame(animate);
+  </script>
+</body>
+</html>
