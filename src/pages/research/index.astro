@@ -1,174 +1,711 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import {
+  profile,
+  researchInterests,
+  currentResearch,
+  publicationsPeerReviewed,
+  publicationsMisc,
+  presentations,
+  grants,
+  awards,
+  teaching,
+  experience,
+  education,
+  academicService,
+} from '../../data/researchData.ts';
 
 export const prerender = true;
+
+const byYearDesc = <T extends { year: number }>(items: T[]) =>
+  [...items].sort((a, b) => b.year - a.year);
+
+const sortedPeerReviewed = byYearDesc(publicationsPeerReviewed);
+const sortedMisc = byYearDesc(publicationsMisc);
+const sortedPresentations = byYearDesc(presentations);
+const sortedAwards = byYearDesc(awards);
+const sortedTeaching = byYearDesc(teaching);
+const sortedAcademicService = byYearDesc(academicService);
+
+const navItems = [
+  { href: '#research', label: 'Research' },
+  { href: '#publications', label: 'Publications' },
+  { href: '#presentations', label: 'Presentations' },
+  { href: '#projects', label: 'Projects & Grants' },
+  { href: '#awards', label: 'Awards' },
+  { href: '#teaching', label: 'Teaching' },
+  { href: '#experience', label: 'Experience' },
+  { href: '#education', label: 'Education' },
+];
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: profile.name.en ?? profile.name.ja,
+  alternateName: profile.name.ja,
+  affiliation: profile.affiliations.map((a) => ({
+    '@type': 'Organization',
+    name: a.org,
+  })),
+  alumniOf: education.map((e) => ({
+    '@type': 'CollegeOrUniversity',
+    name: e.institutionJa,
+  })),
+  knowsAbout: researchInterests.map((i) => i.en ?? i.ja),
+  url: 'https://waxogawa.jp/research/',
+};
 ---
 
-<BaseLayout title="Research" description="研究・調査活動の記録">
-  <div class="article-container">
+<BaseLayout
+  title="Research"
+  description="Research profile, publications, curatorial research, grants, presentations, and academic activities of Rakuki Ogawa."
+>
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
-    <p class="research-statement">
-      キュレーター・研究者（現代アート・人類学）。<br />
-      展示、批評、制作を横断しながら活動しています。
-    </p>
+  <div class="research-page">
 
-    <div class="research-body">
+    <nav class="research-nav" aria-label="研究ページ内ナビゲーション">
+      <div class="research-nav-scroll">
+        {navItems.map((item) => (
+          <a href={item.href} class="research-nav-link">{item.label}</a>
+        ))}
+      </div>
+    </nav>
 
-      <section class="research-section">
-        <h2 class="research-section-label">学術・研究</h2>
-        <ul class="affil-list">
-          <li class="affil-item">
-            <span class="affil-org">慶應義塾大学大学院 政策・メディア研究科</span>
-            <span class="affil-role">後期博士課程在籍中</span>
-          </li>
-          <li class="affil-item">
-            <span class="affil-org">人間文化機構 総合地球環境学研究所</span>
-            <span class="affil-role">共同研究員</span>
-          </li>
-          <li class="affil-item">
-            <span class="affil-org">科学技術振興機構（JST）次世代研究者挑戦的研究プログラム</span>
-            <span class="affil-role">フェロー</span>
-          </li>
+    <!-- A. Research Profile / B. Research Interests / C. Current Research -->
+    <section id="research" class="research-block">
+      <div class="profile-header">
+        <h1 class="profile-name">
+          {profile.name.ja}
+          {profile.name.en && <span class="profile-name-en">{profile.name.en}</span>}
+        </h1>
+        <ul class="profile-affil-list">
+          {profile.affiliations.map((a) => (
+            <li class="profile-affil-item">
+              <span class="profile-affil-org">{a.org}</span>
+              <span class="profile-affil-role">
+                {a.role}{a.roleEn ? ` / ${a.roleEn}` : ''}
+              </span>
+            </li>
+          ))}
         </ul>
-      </section>
+      </div>
 
-      <section class="research-section">
-        <h2 class="research-section-label">事業・法人</h2>
-        <ul class="affil-list">
-          <li class="affil-item">
-            <span class="affil-org">株式会社 金丸商店</span>
-            <span class="affil-role">共同代表</span>
+      <p class="profile-statement">{profile.statement}</p>
+
+      <div class="interest-tags">
+        {researchInterests.map((tag) => (
+          <span class="interest-tag">
+            {tag.ja}{tag.en ? ` / ${tag.en}` : ''}
+          </span>
+        ))}
+      </div>
+
+      <h2 class="section-heading">Current Research</h2>
+      <div class="current-research-grid">
+        {currentResearch.map((item) => (
+          <div class="current-research-card">
+            <h3 class="current-research-title">
+              {item.title.ja}
+              {item.title.en && <span class="current-research-title-en">{item.title.en}</span>}
+            </h3>
+            <p class="current-research-description">{item.description}</p>
+            <div class="current-research-meta">
+              {item.period && <span>{item.period}</span>}
+              {item.location && <span>{item.location}</span>}
+              {item.status && <span class="current-research-status">{item.status}</span>}
+            </div>
+            {item.link && (
+              <a href={item.link.url} class="research-external-link" target="_blank" rel="noopener noreferrer">
+                {item.link.label} ↗
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Publications -->
+    <section id="publications" class="research-block">
+      <h2 class="section-heading">Publications</h2>
+
+      <div class="pub-filter" role="group" aria-label="Publications フィルター">
+        <button type="button" class="pub-filter-btn is-active" data-filter="all">All</button>
+        <button type="button" class="pub-filter-btn" data-filter="peer-reviewed">Peer-reviewed</button>
+        <button type="button" class="pub-filter-btn" data-filter="essay">Essay</button>
+      </div>
+
+      <h3 class="subsection-heading" data-pub-group="peer-reviewed">Peer-reviewed Articles</h3>
+      <ul class="timeline-list" data-pub-group="peer-reviewed">
+        {sortedPeerReviewed.map((pub) => (
+          <li class="timeline-row" data-pub-type="peer-reviewed">
+            <span class="timeline-year">{pub.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{pub.titleJa}</p>
+              <p class="pub-meta">
+                {pub.authors.join('・')} — {pub.journal} {pub.volume}({pub.issue}), pp.{pub.pages}, {pub.year}
+              </p>
+              <p class="pub-tags">
+                {pub.peerReviewed && <span class="pub-tag">査読有り</span>}
+                {pub.firstAuthor && <span class="pub-tag">筆頭著者</span>}
+              </p>
+              {(pub.url || pub.doi) && (
+                <a href={pub.url ?? pub.doi ?? '#'} class="research-external-link" target="_blank" rel="noopener noreferrer">
+                  {pub.doi ? 'DOI ↗' : 'View ↗'}
+                </a>
+              )}
+            </div>
           </li>
-          <li class="affil-item">
-            <span class="affil-org">一般社団法人 HERO's Lab</span>
-            <span class="affil-role">共同理事</span>
+        ))}
+      </ul>
+
+      <h3 class="subsection-heading" data-pub-group="essay">Essays / MISC</h3>
+      <ul class="timeline-list" data-pub-group="essay">
+        {sortedMisc.map((pub) => (
+          <li class="timeline-row" data-pub-type="essay">
+            <span class="timeline-year">{pub.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{pub.titleJa}</p>
+              <p class="pub-meta">{pub.publication}{pub.date ? ` — ${pub.date}` : ''}</p>
+            </div>
           </li>
-        </ul>
-      </section>
+        ))}
+      </ul>
+    </section>
 
-      <section class="research-section">
-        <h2 class="research-section-label">その他</h2>
-        <ul class="affil-list">
-          <li class="affil-item">
-            <span class="affil-org">一般社団法人 6okken</span>
-            <span class="affil-role">R&amp;Dメンバー</span>
+    <!-- Presentations -->
+    <section id="presentations" class="research-block">
+      <h2 class="section-heading">Presentations</h2>
+      <ul class="timeline-list">
+        {sortedPresentations.map((p) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{p.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{p.title}</p>
+              <p class="pub-meta">
+                {[p.institution, p.event].filter(Boolean).join(' — ')}
+                {p.date ? ` — ${p.date}` : ''}
+              </p>
+              {p.type && <p class="pub-tags"><span class="pub-tag">{p.type}</span></p>}
+            </div>
           </li>
-          <li class="affil-item">
-            <span class="affil-org">一般社団法人 みなとメディアミュージアム</span>
-            <span class="affil-role">実行委員</span>
+        ))}
+      </ul>
+    </section>
+
+    <!-- Research Projects & Grants -->
+    <section id="projects" class="research-block">
+      <h2 class="section-heading">Research Projects & Grants</h2>
+      <div class="grant-list">
+        {grants.map((g) => (
+          <div class="grant-card">
+            <span class="grant-period">{g.periodLabel}</span>
+            <div class="grant-content">
+              <p class="grant-title">{g.title}</p>
+              <p class="pub-meta">
+                {g.org}{g.program ? ` — ${g.program}` : ''}
+              </p>
+              <p class="pub-meta">
+                {[g.startDate, g.endDate].filter(Boolean).join(' – ')}
+              </p>
+              <p class="grant-pi">PI: {g.pi}</p>
+              {g.description && <p class="pub-meta">{g.description}</p>}
+              {g.amount && <p class="pub-meta">{g.amount}</p>}
+              {g.link && (
+                <a href={g.link} class="research-external-link" target="_blank" rel="noopener noreferrer">
+                  Project page ↗
+                </a>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Awards -->
+    <section id="awards" class="research-block">
+      <h2 class="section-heading">Awards</h2>
+      <ul class="timeline-list">
+        {sortedAwards.map((a) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{a.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{a.title}</p>
+              <p class="pub-meta">{a.org}{a.date ? ` — ${a.date}` : ''}</p>
+              {a.workTitle && <p class="pub-meta">「{a.workTitle}」</p>}
+              {a.recipients && <p class="pub-meta">{a.recipients.join(' / ')}</p>}
+            </div>
           </li>
-        </ul>
-      </section>
+        ))}
+      </ul>
+    </section>
 
-      <section class="research-section">
-        <h2 class="research-section-label">関心領域</h2>
-        <ul class="research-topics">
-          <li>デザイン批評・デザイン史</li>
-          <li>メディア論・視覚文化</li>
-          <li>展示論・キュレーション実践</li>
-        </ul>
-      </section>
+    <!-- Teaching -->
+    <section id="teaching" class="research-block">
+      <h2 class="section-heading">Teaching</h2>
+      <ul class="timeline-list">
+        {sortedTeaching.map((t) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{t.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{t.title}</p>
+              <p class="pub-meta">
+                {t.institution}
+                {t.role ? ` — ${t.role}` : ''}
+                {t.period ? ` — ${t.period}` : ''}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
 
-      <section class="research-section">
-        <h2 class="research-section-label">Academic Profile</h2>
-        <p class="research-text">researchmap にて業績一覧を公開しています。</p>
-        <a
-          href="https://researchmap.jp/waxogawa"
-          class="research-external-link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          researchmap ↗
-        </a>
-      </section>
+    <!-- Professional / Academic Experience -->
+    <section id="experience" class="research-block">
+      <h2 class="section-heading">Professional / Academic Experience</h2>
+      <ul class="timeline-list">
+        {experience.map((e) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{e.periodLabel}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{e.org}{e.department ? ` — ${e.department}` : ''}</p>
+              <p class="pub-meta">{e.role}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
 
-      <section class="research-section">
-        <h2 class="research-section-label">Publications</h2>
-        <p class="research-text research-placeholder">準備中です。</p>
-      </section>
+    <!-- Education -->
+    <section id="education" class="research-block">
+      <h2 class="section-heading">Education</h2>
+      <ul class="timeline-list">
+        {education.map((e) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{e.periodLabel}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{e.institutionJa}</p>
+              {e.institutionEn && <p class="pub-meta">{e.institutionEn}</p>}
+              {e.departmentJa && <p class="pub-meta">{e.departmentJa}</p>}
+              {(e.startDate || e.endDate) && (
+                <p class="pub-meta">{[e.startDate, e.endDate].filter(Boolean).join(' – ')}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
 
-    </div>
+    <!-- Academic Service -->
+    <section id="academic-service" class="research-block">
+      <h2 class="section-heading">Academic Service</h2>
+      <ul class="timeline-list">
+        {sortedAcademicService.map((s) => (
+          <li class="timeline-row">
+            <span class="timeline-year">{s.year}</span>
+            <div class="timeline-content">
+              <p class="pub-title">{s.title}</p>
+              <p class="pub-meta">
+                {s.role}{s.institution ? ` — ${s.institution}` : ''}
+              </p>
+              {(s.startDate || s.endDate) && (
+                <p class="pub-meta">{[s.startDate, s.endDate].filter(Boolean).join(' – ')}</p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="research-block">
+      <p class="research-text">researchmap にて業績一覧を公開しています。</p>
+      <a
+        href="https://researchmap.jp/waxogawa"
+        class="research-external-link"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        researchmap ↗
+      </a>
+    </section>
+
   </div>
 </BaseLayout>
 
+<script>
+  const buttons = document.querySelectorAll<HTMLButtonElement>('.pub-filter-btn');
+  const groups = document.querySelectorAll<HTMLElement>('[data-pub-group]');
+  const rows = document.querySelectorAll<HTMLElement>('[data-pub-type]');
+
+  buttons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      buttons.forEach((b) => b.classList.remove('is-active'));
+      btn.classList.add('is-active');
+      const filter = btn.dataset.filter;
+
+      if (filter === 'all') {
+        groups.forEach((g) => (g.style.display = ''));
+        rows.forEach((r) => (r.style.display = ''));
+        return;
+      }
+
+      groups.forEach((g) => {
+        g.style.display = g.dataset.pubGroup === filter ? '' : 'none';
+      });
+      rows.forEach((r) => {
+        r.style.display = r.dataset.pubType === filter ? '' : 'none';
+      });
+    });
+  });
+</script>
+
 <style>
-  .research-statement {
-    font-family: var(--font-serif);
-    font-size: 1.08rem;
-    line-height: 2.0;
-    color: var(--color-text);
-    max-width: 560px;
-    padding-bottom: 52px;
-    margin-bottom: 52px;
+  .research-page {
+    max-width: var(--width-site);
+    margin-inline: auto;
+    padding-inline: var(--pad-h);
+  }
+
+  /* ── Sticky section nav ── */
+  .research-nav {
+    position: sticky;
+    top: 73px;
+    background-color: var(--color-bg);
     border-bottom: 1px solid var(--color-border);
+    margin-bottom: 56px;
+    z-index: 5;
   }
 
-  .research-body {
+  .research-nav-scroll {
     display: flex;
-    flex-direction: column;
-    gap: 48px;
+    gap: 24px;
+    overflow-x: auto;
+    padding-block: 14px;
+    scrollbar-width: none;
   }
 
-  .research-section-label {
+  .research-nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .research-nav-link {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    white-space: nowrap;
+    transition: color var(--transition);
+  }
+
+  .research-nav-link:hover {
+    color: var(--color-accent);
+  }
+
+  /* ── Blocks ── */
+  .research-block {
+    padding-block: 56px;
+    border-bottom: 1px solid var(--color-border);
+    scroll-margin-top: 130px;
+  }
+
+  .research-block:last-child {
+    border-bottom: none;
+  }
+
+  .section-heading {
     font-size: 0.68rem;
     font-weight: 500;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--color-muted);
-    margin-bottom: 0;
+    margin-bottom: 28px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--color-border);
   }
 
-  .affil-list {
+  .subsection-heading {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-text);
+    margin-block: 32px 12px;
+  }
+
+  .subsection-heading:first-of-type {
+    margin-top: 0;
+  }
+
+  /* ── Profile ── */
+  .profile-header {
+    margin-bottom: 24px;
+  }
+
+  .profile-name {
+    font-family: var(--font-serif);
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: 16px;
+  }
+
+  .profile-name-en {
+    display: block;
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--color-muted);
+    margin-top: 4px;
+  }
+
+  .profile-affil-list {
     list-style: none;
     display: flex;
     flex-direction: column;
+    gap: 6px;
   }
 
-  .affil-item {
+  .profile-affil-item {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    gap: 20px;
-    padding: 12px 0;
+    gap: 16px;
+    font-size: 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .profile-affil-org {
+    color: var(--color-text);
+  }
+
+  .profile-affil-role {
+    color: var(--color-muted);
+    white-space: nowrap;
+  }
+
+  .profile-statement {
+    font-family: var(--font-serif);
+    font-size: 1.05rem;
+    line-height: 2.0;
+    color: var(--color-text);
+    max-width: 640px;
+    margin-bottom: 32px;
+  }
+
+  .interest-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 48px;
+  }
+
+  .interest-tag {
+    font-size: 0.75rem;
+    letter-spacing: 0.03em;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    padding: 5px 12px;
+    transition: border-color var(--transition), color var(--transition);
+  }
+
+  /* ── Current Research ── */
+  .current-research-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 32px;
+  }
+
+  .current-research-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 24px;
+    border: 1px solid var(--color-border);
+    background-color: #fff;
+    transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+  }
+
+  .current-research-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+  }
+
+  .current-research-title {
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .current-research-title-en {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--color-muted);
+    margin-top: 2px;
+  }
+
+  .current-research-description {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+    line-height: 1.65;
+  }
+
+  .current-research-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-top: auto;
+    padding-top: 6px;
+  }
+
+  .current-research-status {
+    color: var(--color-accent);
+  }
+
+  /* ── Publications filter ── */
+  .pub-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .pub-filter-btn {
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    background: none;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color var(--transition), color var(--transition), background-color var(--transition);
+  }
+
+  .pub-filter-btn:hover {
+    color: var(--color-text);
+  }
+
+  .pub-filter-btn.is-active {
+    color: var(--color-bg);
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  /* ── Timeline (2-column: year | content) ── */
+  .timeline-list {
+    list-style: none;
+  }
+
+  .timeline-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 4px 24px;
+    padding-block: 18px;
     border-bottom: 1px solid var(--color-border);
   }
 
-  .affil-org {
-    font-size: 0.90rem;
+  .timeline-row:first-child {
+    border-top: none;
+  }
+
+  .timeline-year {
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    padding-top: 2px;
+  }
+
+  .timeline-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .pub-title {
+    font-size: 0.92rem;
     color: var(--color-text);
     line-height: 1.55;
   }
 
-  .affil-role {
-    font-size: 0.80rem;
+  .pub-meta {
+    font-size: 0.8rem;
     color: var(--color-muted);
-    flex-shrink: 0;
-    text-align: right;
-    white-space: nowrap;
+    line-height: 1.6;
   }
 
-  .research-topics {
-    list-style: none;
+  .pub-tags {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+  }
+
+  .pub-tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    border: 1px solid var(--color-border);
+    padding: 2px 8px;
+  }
+
+  /* ── Grants ── */
+  .grant-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-top: 16px;
   }
 
-  .research-topics li {
-    font-size: 0.92rem;
-    color: var(--color-text);
-    padding-left: 1.2em;
-    position: relative;
+  .grant-card {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 4px 24px;
+    padding-block: 24px;
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .research-topics li::before {
-    content: '–';
-    position: absolute;
-    left: 0;
+  .grant-card:last-child {
+    border-bottom: none;
+  }
+
+  .grant-period {
+    font-size: 0.78rem;
     color: var(--color-muted);
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+    padding-top: 2px;
+  }
+
+  .grant-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .grant-title {
+    font-size: 0.95rem;
+    color: var(--color-text);
+    line-height: 1.55;
+    margin-bottom: 2px;
+  }
+
+  .grant-pi {
+    font-size: 0.8rem;
+    color: var(--color-text);
+    margin-top: 2px;
+  }
+
+  .research-external-link {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    letter-spacing: 0.02em;
+    transition: color var(--transition);
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  .research-external-link:hover {
+    color: var(--color-accent);
   }
 
   .research-text {
@@ -176,32 +713,13 @@ export const prerender = true;
     color: var(--color-muted);
     line-height: 1.7;
     margin-bottom: 14px;
-    padding-top: 14px;
   }
 
-  .research-placeholder {
-    font-style: italic;
-  }
-
-  .research-external-link {
-    font-size: 0.88rem;
-    color: var(--color-text);
-    letter-spacing: 0.02em;
-    transition: color var(--transition);
-    display: inline-block;
-  }
-
-  .research-external-link:hover {
-    color: var(--color-accent);
-  }
-
-  @media (max-width: 600px) {
-    .affil-item {
-      flex-direction: column;
-      gap: 4px;
-    }
-    .affil-role {
-      text-align: left;
+  @media (max-width: 700px) {
+    .timeline-row,
+    .grant-card {
+      grid-template-columns: 1fr;
+      gap: 6px;
     }
   }
 </style>
