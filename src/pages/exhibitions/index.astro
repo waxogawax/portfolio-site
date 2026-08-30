@@ -22,17 +22,15 @@ function formatDateRange(start: Date, end?: Date): string {
   return `${s} – ${end.toLocaleDateString('ja-JP', opts)}`;
 }
 
-// A row's hover layer is a small cluster of images, not one documentation
-// shot: a mandatory "main" image (cover, falling back to a hand-picked
-// fragment, falling back to the first gallery photo) plus up to 3 more
-// gallery photos that scatter in at random positions/sizes client-side.
-function scatterFor(data: (typeof sortedEntries)[number]['data']) {
-  const mainSrc = data.cover ?? data.previewImage?.src ?? data.images[0]?.src;
+// previewImage is explicitly hand-picked for this index experience, so it
+// takes priority over the documentation cover — a fragment, not a poster.
+function previewFor(data: (typeof sortedEntries)[number]['data']) {
+  const mainSrc = data.previewImage?.src ?? data.images[0]?.src ?? data.cover;
   if (!mainSrc) return null;
   const mainAlt = data.previewImage?.alt ?? data.title;
   const extras = data.images
     .filter((img) => img.src !== mainSrc)
-    .slice(0, 3)
+    .slice(0, 2)
     .map((img) => ({ src: img.src, alt: img.alt ?? img.caption ?? data.title }));
   return {
     main: { src: mainSrc, alt: mainAlt, mobileCropPosition: data.previewImage?.mobileCropPosition },
@@ -42,57 +40,69 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
 ---
 
 <BaseLayout title="Exhibitions" description="展示記録の一覧">
-  <div class="page-heading">
-    <h1>Exhibitions</h1>
-    <p>{sortedEntries.length} exhibitions</p>
-  </div>
+  <div class="exhibitions-page" id="exhibitions-page">
+    <div class="exhibitions-content" id="exhibitions-content">
+      <div class="page-heading">
+        <h1>Exhibitions</h1>
+        <p>{sortedEntries.length} exhibitions</p>
+      </div>
 
-  <ul class="exh-list" id="exh-list">
-    {sortedEntries.map((entry) => {
-      const scatter = scatterFor(entry.data);
-      return (
-        <li>
-          <a
-            href={`/exhibitions/${entry.id.replace(/\.md$/, '')}/`}
-            class="exh-item"
-            data-preview-src={scatter?.main.src}
-            data-preview-alt={scatter?.main.alt ?? entry.data.title}
-            data-preview-extra={scatter ? JSON.stringify(scatter.extras) : undefined}
-          >
-            <span class="exh-item-year">{entry.data.year}</span>
-            <div class="exh-item-body">
-              <span class="exh-item-type">{entry.data.type}</span>
-              <span class="exh-item-title">{entry.data.title}</span>
-              {scatter && (
-                <img
-                  class="exh-item-fragment"
-                  src={scatter.main.src}
-                  alt={scatter.main.alt}
-                  loading="lazy"
-                  style={scatter.main.mobileCropPosition ? `object-position:${scatter.main.mobileCropPosition}` : undefined}
-                />
-              )}
-              <span class="exh-item-venue">
-                {entry.data.venue}, {entry.data.city}
-                {entry.data.country !== 'Japan' && `, ${entry.data.country}`}
-                <span style="margin-left: 8px; color: var(--color-border);">|</span>
-                <span style="margin-left: 8px;">{formatDateRange(entry.data.startDate, entry.data.endDate)}</span>
-              </span>
-              {entry.data.tags.length > 0 && (
-                <div class="exh-item-tags">
-                  {entry.data.tags.map((tag) => (
-                    <span class="tag">{tag}</span>
-                  ))}
+      <ul class="exh-list" id="exh-list">
+        {sortedEntries.map((entry) => {
+          const preview = previewFor(entry.data);
+          return (
+            <li>
+              <a
+                href={`/exhibitions/${entry.id.replace(/\.md$/, '')}/`}
+                class="exh-item"
+                data-exh-id={entry.id}
+                data-preview-src={preview?.main.src}
+                data-preview-alt={preview?.main.alt ?? entry.data.title}
+                data-preview-extra={preview ? JSON.stringify(preview.extras) : undefined}
+              >
+                <span class="exh-item-year">{entry.data.year}</span>
+                <div class="exh-item-body">
+                  <span class="exh-item-type">{entry.data.type}</span>
+                  <span class="exh-item-title">{entry.data.title}</span>
+                  {preview && (
+                    <img
+                      class="exh-item-fragment"
+                      src={preview.main.src}
+                      alt={preview.main.alt}
+                      loading="lazy"
+                      style={preview.main.mobileCropPosition ? `object-position:${preview.main.mobileCropPosition}` : undefined}
+                    />
+                  )}
+                  <span class="exh-item-venue">
+                    {entry.data.venue}, {entry.data.city}
+                    {entry.data.country !== 'Japan' && `, ${entry.data.country}`}
+                    <span style="margin-left: 8px; color: var(--color-border);">|</span>
+                    <span style="margin-left: 8px;">{formatDateRange(entry.data.startDate, entry.data.endDate)}</span>
+                  </span>
+                  {entry.data.tags.length > 0 && (
+                    <div class="exh-item-tags">
+                      {entry.data.tags.map((tag) => (
+                        <span class="tag">{tag}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </a>
-        </li>
-      );
-    })}
-  </ul>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
 
-  <div class="exh-scatter" id="exh-scatter" aria-hidden="true"></div>
+    <!-- Dedicated right-side compositional field. A fixed pool of 3 tiles is
+         reused across hovers; CSS positions them per data-layout so every
+         reveal is one of a few deliberate compositions, never random. -->
+    <div class="exh-preview-field" id="exh-preview-field" data-layout="solo" aria-hidden="true">
+      <img class="exh-preview-tile exh-tile-main" id="exh-tile-main" alt="" />
+      <img class="exh-preview-tile exh-tile-extra-0" id="exh-tile-extra-0" alt="" />
+      <img class="exh-preview-tile exh-tile-extra-1" id="exh-tile-extra-1" alt="" />
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -110,41 +120,148 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
     display: none;
   }
 
-  /* ── Floating desktop image scatter ──
-     Fixed, non-interactive layer. JS populates it with a handful of <img>
-     tiles positioned entirely within the side gutters outside the text
-     column (measured live against #exh-list's bounding box), so it can
-     never sit on top of a clickable row. Sizes/positions/rotation are
-     randomized per reveal for the "ぱらぱら" scattered feel. */
-  .exh-scatter {
-    position: fixed;
-    inset: 0;
-    z-index: 8; /* above content, below site-header (10) and any modal overlay */
-    pointer-events: none;
+  /* ── Split-layout hover: text column compresses left to make room ──
+     Default state is untouched (width:100%, no transform) — this only
+     engages once .exhibitions-page carries .has-preview, and only on
+     desktop widths (see media query below). */
+  .exhibitions-content {
+    width: 100%;
+    transform: translateX(0);
+    transition: width 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  .exh-scatter-item {
+  /* ── Right-side preview field: a fixed compositional frame, not a floating
+     thumbnail layer. Images are positioned inside it per data-layout. ── */
+  .exh-preview-field {
     position: fixed;
+    top: 73px; /* below the sticky site-header */
+    right: 0;
+    width: 48vw;
+    height: calc(100vh - 73px);
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 8; /* above content, below site-header (10) and any modal overlay */
+    display: none;
+  }
+
+  .exh-preview-tile {
+    position: absolute;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
     background: var(--color-bg);
     border: 1px solid var(--preview-border);
     box-shadow: 0 8px 28px var(--preview-shadow);
     opacity: 0;
-    transform: rotate(var(--rot, 0deg)) scale(0.92);
+    transform: translateX(16px);
     transition: opacity 220ms ease, transform 220ms ease;
   }
 
-  .exh-scatter-item.is-visible {
+  .exh-preview-tile.is-visible {
     opacity: 1;
-    transform: rotate(var(--rot, 0deg)) scale(1);
+    transform: translateX(0);
+  }
+
+  /* Layout: a single image (no gallery extras available) */
+  .exh-preview-field[data-layout='solo'] .exh-tile-main {
+    left: 5%;
+    top: 5%;
+    width: 90%;
+    height: 90%;
+  }
+  .exh-preview-field[data-layout='solo'] .exh-tile-extra-0,
+  .exh-preview-field[data-layout='solo'] .exh-tile-extra-1 {
+    display: none;
+  }
+
+  /* Layout: main + one supporting fragment, side by side */
+  .exh-preview-field[data-layout='pair'] .exh-tile-main {
+    left: 3%;
+    top: 5%;
+    width: 58%;
+    height: 90%;
+  }
+  .exh-preview-field[data-layout='pair'] .exh-tile-extra-0 {
+    right: 3%;
+    top: 5%;
+    width: 34%;
+    height: 90%;
+  }
+  .exh-preview-field[data-layout='pair'] .exh-tile-extra-1 {
+    display: none;
+  }
+
+  /* Layout A: main left, two stacked right */
+  .exh-preview-field[data-layout='a'] .exh-tile-main {
+    left: 4%;
+    top: 6%;
+    width: 56%;
+    height: 88%;
+  }
+  .exh-preview-field[data-layout='a'] .exh-tile-extra-0 {
+    right: 4%;
+    top: 6%;
+    width: 38%;
+    height: 41%;
+  }
+  .exh-preview-field[data-layout='a'] .exh-tile-extra-1 {
+    right: 4%;
+    bottom: 6%;
+    width: 38%;
+    height: 41%;
+  }
+
+  /* Layout B: main on top, two smaller below */
+  .exh-preview-field[data-layout='b'] .exh-tile-main {
+    left: 5%;
+    top: 5%;
+    width: 90%;
+    height: 56%;
+  }
+  .exh-preview-field[data-layout='b'] .exh-tile-extra-0 {
+    left: 5%;
+    bottom: 5%;
+    width: 43%;
+    height: 35%;
+  }
+  .exh-preview-field[data-layout='b'] .exh-tile-extra-1 {
+    right: 5%;
+    bottom: 5%;
+    width: 43%;
+    height: 35%;
+  }
+
+  /* Layout C: two overlapping verticals + one small detail */
+  .exh-preview-field[data-layout='c'] .exh-tile-main {
+    left: 4%;
+    top: 6%;
+    width: 50%;
+    height: 88%;
+  }
+  .exh-preview-field[data-layout='c'] .exh-tile-extra-0 {
+    left: 44%;
+    top: 16%;
+    width: 46%;
+    height: 62%;
+  }
+  .exh-preview-field[data-layout='c'] .exh-tile-extra-1 {
+    right: 4%;
+    bottom: 4%;
+    width: 28%;
+    height: 26%;
+  }
+
+  @media (min-width: 769px) {
+    .exh-preview-field {
+      display: block;
+    }
+
+    .exhibitions-page.has-preview .exhibitions-content {
+      width: 52vw;
+      transform: translateX(-2vw);
+    }
   }
 
   @media (max-width: 768px) {
-    .exh-scatter {
-      display: none;
-    }
-
     .exh-item-fragment {
       display: block;
       width: 100%;
@@ -156,10 +273,11 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .exh-item {
+    .exh-item,
+    .exhibitions-content {
       transition: none;
     }
-    .exh-scatter-item {
+    .exh-preview-tile {
       transition: opacity 150ms ease;
       transform: none !important;
     }
@@ -167,86 +285,49 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
 </style>
 
 <script>
+  const page = document.getElementById('exhibitions-page');
   const list = document.getElementById('exh-list');
-  const scatterLayer = document.getElementById('exh-scatter');
+  const field = document.getElementById('exh-preview-field');
+  const mainTile = document.getElementById('exh-tile-main') as HTMLImageElement | null;
+  const extraTiles = [
+    document.getElementById('exh-tile-extra-0') as HTMLImageElement | null,
+    document.getElementById('exh-tile-extra-1') as HTMLImageElement | null,
+  ];
   const rows = document.querySelectorAll<HTMLAnchorElement>('.exh-item[data-preview-src]');
 
-  if (list && scatterLayer && rows.length > 0) {
+  if (page && list && field && mainTile && rows.length > 0) {
     let activeRow: HTMLAnchorElement | null = null;
 
-    const MIN_GUTTER = 96; // px — below this, that side has no safe space at all
-
-    function rand(min: number, max: number) {
-      return Math.random() * (max - min) + min;
+    // Stable per-exhibition hash so the same show always gets the same
+    // 3-image composition, rather than reshuffling on every hover.
+    function hashCode(str: string) {
+      let h = 0;
+      for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+      return Math.abs(h);
     }
 
-    // The only zone tiles are allowed in: outside #exh-list's own box, so
-    // they can never overlap a row — measured live so it adapts to viewport
-    // width, zoom, etc.
-    function getGutters() {
-      const rect = list!.getBoundingClientRect();
-      return {
-        left: Math.max(0, rect.left),
-        right: Math.max(0, window.innerWidth - rect.right),
-      };
+    const THREE_IMAGE_LAYOUTS = ['a', 'b', 'c'];
+
+    function pickLayout(id: string, extrasCount: number) {
+      if (extrasCount === 0) return 'solo';
+      if (extrasCount === 1) return 'pair';
+      return THREE_IMAGE_LAYOUTS[hashCode(id) % THREE_IMAGE_LAYOUTS.length];
     }
 
-    function clearScatter() {
-      scatterLayer!.innerHTML = '';
-    }
-
-    function placeTile(
-      src: string,
-      alt: string,
-      opts: { minW: number; maxW: number; ratioMin: number; ratioMax: number },
-      isMain: boolean,
-      index: number
-    ) {
-      const gutters = getGutters();
-      const sides: Array<'left' | 'right'> = [];
-      if (gutters.left >= MIN_GUTTER) sides.push('left');
-      if (gutters.right >= MIN_GUTTER) sides.push('right');
-      if (sides.length === 0) return; // no safe space anywhere — skip silently
-
-      const side: 'left' | 'right' = isMain
-        ? gutters.left >= gutters.right
-          ? (sides.includes('left') ? 'left' : 'right')
-          : (sides.includes('right') ? 'right' : 'left')
-        : sides[Math.floor(Math.random() * sides.length)];
-
-      const gutterWidth = side === 'left' ? gutters.left : gutters.right;
-      const maxW = Math.min(opts.maxW, gutterWidth - 16);
-      if (maxW < 64) return; // too tight even for a small tile — skip
-
-      const w = Math.round(rand(Math.min(opts.minW, maxW), maxW));
-      const h = Math.round(w * rand(opts.ratioMin, opts.ratioMax));
-      const top = Math.round(rand(120, Math.max(160, window.innerHeight - h - 100)));
-      const insetFromEdge = Math.round(rand(12, Math.max(12, gutterWidth - w - 8)));
-      const rot = rand(-7, 7).toFixed(1);
-
-      const img = document.createElement('img');
-      img.src = src;
-      img.alt = alt;
-      img.loading = 'lazy';
-      img.className = 'exh-scatter-item';
-      img.style.width = w + 'px';
-      img.style.height = h + 'px';
-      img.style.top = top + 'px';
-      img.style.setProperty('--rot', rot + 'deg');
-      img.style.transitionDelay = index * 70 + 'ms';
-      if (side === 'left') {
-        img.style.left = insetFromEdge + 'px';
-      } else {
-        img.style.right = insetFromEdge + 'px';
+    function reveal(tile: HTMLImageElement, src: string, alt: string, delayMs: number) {
+      tile.classList.remove('is-visible');
+      tile.style.display = '';
+      tile.style.transitionDelay = delayMs + 'ms';
+      if (tile.getAttribute('src') !== src) {
+        tile.src = src;
+        tile.alt = alt;
       }
-      scatterLayer!.appendChild(img);
-      requestAnimationFrame(() => requestAnimationFrame(() => img.classList.add('is-visible')));
+      requestAnimationFrame(() => requestAnimationFrame(() => tile.classList.add('is-visible')));
     }
 
-    function showScatterFor(row: HTMLAnchorElement) {
-      clearScatter();
+    function showPreviewFor(row: HTMLAnchorElement) {
       const src = row.dataset.previewSrc;
-      if (!src) return;
+      if (!src || !mainTile || !field) return;
       const alt = row.dataset.previewAlt ?? '';
       let extras: Array<{ src: string; alt?: string }> = [];
       try {
@@ -254,25 +335,28 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
       } catch {
         extras = [];
       }
+      extras = extras.slice(0, 2);
 
-      // The main image is a must — the larger, more prominent tile.
-      placeTile(src, alt, { minW: 170, maxW: 260, ratioMin: 0.68, ratioMax: 1.0 }, true, 0);
-      // 2–3 extras — smaller and more varied in shape.
-      extras.slice(0, 3).forEach((ex, i) => {
-        placeTile(ex.src, ex.alt ?? alt, { minW: 90, maxW: 170, ratioMin: 0.7, ratioMax: 1.35 }, false, i + 1);
+      field.dataset.layout = pickLayout(row.dataset.exhId ?? src, extras.length);
+
+      reveal(mainTile, src, alt, 0);
+      extraTiles.forEach((tile, i) => {
+        if (!tile) return;
+        const ex = extras[i];
+        if (ex) {
+          reveal(tile, ex.src, ex.alt ?? alt, 50 + i * 50);
+        } else {
+          tile.classList.remove('is-visible');
+        }
       });
-    }
-
-    function hideScatter() {
-      scatterLayer!.querySelectorAll('.exh-scatter-item').forEach((el) => el.classList.remove('is-visible'));
-      window.setTimeout(clearScatter, 260);
     }
 
     function activate(row: HTMLAnchorElement) {
       row.classList.add('is-active');
       list?.classList.add('has-active');
+      page?.classList.add('has-preview');
       activeRow = row;
-      showScatterFor(row);
+      showPreviewFor(row);
     }
 
     function deactivate(row: HTMLAnchorElement) {
@@ -280,7 +364,9 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
       if (activeRow !== row) return;
       activeRow = null;
       list?.classList.remove('has-active');
-      hideScatter();
+      page?.classList.remove('has-preview');
+      mainTile?.classList.remove('is-visible');
+      extraTiles.forEach((t) => t?.classList.remove('is-visible'));
     }
 
     rows.forEach((row) => {
@@ -290,35 +376,30 @@ function scatterFor(data: (typeof sortedEntries)[number]['data']) {
       row.addEventListener('blur', () => deactivate(row));
     });
 
-    // Preload each row's main image as it nears the viewport, so the
-    // hover/idle reveal itself never waits on a network fetch.
+    // Preload each row's images as it nears the viewport, so a hover reveal
+    // never waits on a network fetch.
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(
         (ioEntries) => {
           ioEntries.forEach((entry) => {
             if (!entry.isIntersecting) return;
-            const src = (entry.target as HTMLAnchorElement).dataset.previewSrc;
-            if (src) {
-              const img = new Image();
-              img.src = src;
+            const el = entry.target as HTMLAnchorElement;
+            const srcs = [el.dataset.previewSrc];
+            try {
+              JSON.parse(el.dataset.previewExtra ?? '[]').forEach((ex: { src: string }) => srcs.push(ex.src));
+            } catch {
+              // ignore
             }
+            srcs.filter(Boolean).forEach((s) => {
+              const img = new Image();
+              img.src = s as string;
+            });
             io.unobserve(entry.target);
           });
         },
         { rootMargin: '200px 0px' }
       );
       rows.forEach((row) => io.observe(row));
-    }
-
-    // Idle: before any interaction, show one random exhibition's cluster so
-    // the page doesn't feel empty on arrival. Purely ambient — it doesn't
-    // dim rows or count as "active"; the first real hover/focus replaces it.
-    if (window.matchMedia('(min-width: 769px)').matches) {
-      window.setTimeout(() => {
-        if (activeRow) return;
-        const idle = rows[Math.floor(Math.random() * rows.length)];
-        showScatterFor(idle);
-      }, 700);
     }
   }
 </script>
