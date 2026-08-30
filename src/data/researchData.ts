@@ -89,8 +89,10 @@ export interface PeerReviewedPublication {
   pages?: string;
   peerReviewed: boolean;
   firstAuthor?: boolean;
+  abstract?: string | null;
   url?: string | null;
   doi?: string | null;
+  pdf?: string | null;
 }
 
 export const publicationsPeerReviewed: PeerReviewedPublication[] = [
@@ -106,8 +108,9 @@ export const publicationsPeerReviewed: PeerReviewedPublication[] = [
     pages: '348–376',
     peerReviewed: true,
     firstAuthor: true,
-    url: null,
+    url: 'https://koara.lib.keio.ac.jp/xoonips/modules/xoonips/detail.php?koara_id=AA11671240-00220002-0348',
     doi: null,
+    pdf: 'https://koara.lib.keio.ac.jp/xoonips/modules/xoonips/download.php/AA11671240-00220002-0348.pdf?file_id=173333',
   },
 ];
 
@@ -116,7 +119,9 @@ export interface MiscPublication {
   titleJa: string;
   publication: string;
   date?: string;
+  abstract?: string | null;
   url?: string | null;
+  pdf?: string | null;
 }
 
 export const publicationsMisc: MiscPublication[] = [
@@ -145,7 +150,7 @@ export const publicationsMisc: MiscPublication[] = [
 
 export interface Presentation {
   year: number;
-  title: string;
+  title: Bilingual;
   date?: string;
   institution?: string;
   event?: string;
@@ -156,18 +161,31 @@ export interface Presentation {
     | 'symposium'
     | 'lecture'
     | 'panel';
+  abstract?: string | null;
+  url?: string | null;
+  doi?: string | null;
+  pdf?: string | null;
 }
 
 export const presentations: Presentation[] = [
   {
+    year: 2026,
+    title: {
+      ja: '多時間スケール型ケア・災害研究の超学際的構想',
+      en: 'Trans-disciplinary Concept of Multi-temporal Scale Care Research',
+    },
+    institution: '明治大学',
+    date: '2026-08-29',
+  },
+  {
     year: 2025,
-    title: '展示でフィールドワークする2025 スリランカ編',
+    title: { ja: '展示でフィールドワークする2025 スリランカ編' },
     institution: '東京外国語大学 アジア・アフリカ言語文化研究所',
     date: '2025-02-17',
   },
   {
     year: 2022,
-    title: 'みなとメディアミュージアム2020→2021実践報告',
+    title: { ja: 'みなとメディアミュージアム2020→2021実践報告' },
     event: '環境芸術学会第23回大会「その土地の発酵と循環」',
     date: '2022-10-02',
   },
@@ -184,6 +202,8 @@ export interface Grant {
   description?: string;
   amount?: string;
   link?: string;
+  doi?: string | null;
+  pdf?: string | null;
 }
 
 export const grants: Grant[] = [
@@ -233,6 +253,9 @@ export interface Award {
   workTitle?: string;
   recipients?: string[];
   date?: string;
+  abstract?: string | null;
+  url?: string | null;
+  pdf?: string | null;
 }
 
 export const awards: Award[] = [

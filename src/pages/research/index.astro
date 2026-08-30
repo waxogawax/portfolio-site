@@ -137,39 +137,57 @@ const jsonLd = {
 
       <h3 class="subsection-heading" data-pub-group="peer-reviewed">Peer-reviewed Articles</h3>
       <ul class="timeline-list" data-pub-group="peer-reviewed">
-        {sortedPeerReviewed.map((pub) => (
-          <li class="timeline-row" data-pub-type="peer-reviewed">
-            <span class="timeline-year">{pub.year}</span>
-            <div class="timeline-content">
-              <p class="pub-title">{pub.titleJa}</p>
-              <p class="pub-meta">
-                {pub.authors.join('・')} — {pub.journal} {pub.volume}({pub.issue}), pp.{pub.pages}, {pub.year}
-              </p>
-              <p class="pub-tags">
-                {pub.peerReviewed && <span class="pub-tag">査読有り</span>}
-                {pub.firstAuthor && <span class="pub-tag">筆頭著者</span>}
-              </p>
-              {(pub.url || pub.doi) && (
-                <a href={pub.url ?? pub.doi ?? '#'} class="research-external-link" target="_blank" rel="noopener noreferrer">
-                  {pub.doi ? 'DOI ↗' : 'View ↗'}
-                </a>
-              )}
-            </div>
-          </li>
-        ))}
+        {sortedPeerReviewed.map((pub) => {
+          const meta = `${pub.authors.join('・')} — ${pub.journal} ${pub.volume}(${pub.issue}), pp.${pub.pages}, ${pub.year}`;
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-pub-type="peer-reviewed"
+              data-popup-kind="Peer-reviewed Article"
+              data-popup-title={pub.titleEn ? `${pub.titleJa} / ${pub.titleEn}` : pub.titleJa}
+              data-popup-meta={meta}
+              data-popup-abstract={pub.abstract ?? ''}
+              data-popup-url={pub.url ?? ''}
+              data-popup-doi={pub.doi ?? ''}
+              data-popup-pdf={pub.pdf ?? ''}
+            >
+              <span class="timeline-year">{pub.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">{pub.titleJa}</p>
+                <p class="pub-meta">{meta}</p>
+                <p class="pub-tags">
+                  {pub.peerReviewed && <span class="pub-tag">査読有り</span>}
+                  {pub.firstAuthor && <span class="pub-tag">筆頭著者</span>}
+                </p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
 
       <h3 class="subsection-heading" data-pub-group="essay">Essays / MISC</h3>
       <ul class="timeline-list" data-pub-group="essay">
-        {sortedMisc.map((pub) => (
-          <li class="timeline-row" data-pub-type="essay">
-            <span class="timeline-year">{pub.year}</span>
-            <div class="timeline-content">
-              <p class="pub-title">{pub.titleJa}</p>
-              <p class="pub-meta">{pub.publication}{pub.date ? ` — ${pub.date}` : ''}</p>
-            </div>
-          </li>
-        ))}
+        {sortedMisc.map((pub) => {
+          const meta = `${pub.publication}${pub.date ? ` — ${pub.date}` : ''}`;
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-pub-type="essay"
+              data-popup-kind="Essay / MISC"
+              data-popup-title={pub.titleJa}
+              data-popup-meta={meta}
+              data-popup-abstract={pub.abstract ?? ''}
+              data-popup-url={pub.url ?? ''}
+              data-popup-pdf={pub.pdf ?? ''}
+            >
+              <span class="timeline-year">{pub.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">{pub.titleJa}</p>
+                <p class="pub-meta">{meta}</p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
 
@@ -177,19 +195,31 @@ const jsonLd = {
     <section id="presentations" class="research-block">
       <h2 class="section-heading">Presentations</h2>
       <ul class="timeline-list">
-        {sortedPresentations.map((p) => (
-          <li class="timeline-row">
-            <span class="timeline-year">{p.year}</span>
-            <div class="timeline-content">
-              <p class="pub-title">{p.title}</p>
-              <p class="pub-meta">
-                {[p.institution, p.event].filter(Boolean).join(' — ')}
-                {p.date ? ` — ${p.date}` : ''}
-              </p>
-              {p.type && <p class="pub-tags"><span class="pub-tag">{p.type}</span></p>}
-            </div>
-          </li>
-        ))}
+        {sortedPresentations.map((p) => {
+          const meta = [p.institution, p.event].filter(Boolean).join(' — ') + (p.date ? ` — ${p.date}` : '');
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-popup-kind="Presentation"
+              data-popup-title={p.title.en ? `${p.title.ja} / ${p.title.en}` : p.title.ja}
+              data-popup-meta={meta}
+              data-popup-abstract={p.abstract ?? ''}
+              data-popup-url={p.url ?? ''}
+              data-popup-doi={p.doi ?? ''}
+              data-popup-pdf={p.pdf ?? ''}
+            >
+              <span class="timeline-year">{p.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">
+                  {p.title.ja}
+                  {p.title.en && <span class="pub-title-en">{p.title.en}</span>}
+                </p>
+                <p class="pub-meta">{meta}</p>
+                {p.type && <p class="pub-tags"><span class="pub-tag">{p.type}</span></p>}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
 
@@ -197,28 +227,35 @@ const jsonLd = {
     <section id="projects" class="research-block">
       <h2 class="section-heading">Research Projects & Grants</h2>
       <div class="grant-list">
-        {grants.map((g) => (
-          <div class="grant-card">
-            <span class="grant-period">{g.periodLabel}</span>
-            <div class="grant-content">
-              <p class="grant-title">{g.title}</p>
-              <p class="pub-meta">
-                {g.org}{g.program ? ` — ${g.program}` : ''}
-              </p>
-              <p class="pub-meta">
-                {[g.startDate, g.endDate].filter(Boolean).join(' – ')}
-              </p>
-              <p class="grant-pi">PI: {g.pi}</p>
-              {g.description && <p class="pub-meta">{g.description}</p>}
-              {g.amount && <p class="pub-meta">{g.amount}</p>}
-              {g.link && (
-                <a href={g.link} class="research-external-link" target="_blank" rel="noopener noreferrer">
-                  Project page ↗
-                </a>
-              )}
+        {grants.map((g) => {
+          const meta = `${g.org}${g.program ? ` — ${g.program}` : ''} — ${[g.startDate, g.endDate].filter(Boolean).join(' – ')} — PI: ${g.pi}`;
+          return (
+            <div
+              class="grant-card research-popup-trigger"
+              data-popup-kind="Research Project / Grant"
+              data-popup-title={g.title}
+              data-popup-meta={meta}
+              data-popup-abstract={g.description ?? ''}
+              data-popup-url={g.link ?? ''}
+              data-popup-doi={g.doi ?? ''}
+              data-popup-pdf={g.pdf ?? ''}
+            >
+              <span class="grant-period">{g.periodLabel}</span>
+              <div class="grant-content">
+                <p class="grant-title">{g.title}</p>
+                <p class="pub-meta">
+                  {g.org}{g.program ? ` — ${g.program}` : ''}
+                </p>
+                <p class="pub-meta">
+                  {[g.startDate, g.endDate].filter(Boolean).join(' – ')}
+                </p>
+                <p class="grant-pi">PI: {g.pi}</p>
+                {g.description && <p class="pub-meta">{g.description}</p>}
+                {g.amount && <p class="pub-meta">{g.amount}</p>}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
 
@@ -226,17 +263,28 @@ const jsonLd = {
     <section id="awards" class="research-block">
       <h2 class="section-heading">Awards</h2>
       <ul class="timeline-list">
-        {sortedAwards.map((a) => (
-          <li class="timeline-row">
-            <span class="timeline-year">{a.year}</span>
-            <div class="timeline-content">
-              <p class="pub-title">{a.title}</p>
-              <p class="pub-meta">{a.org}{a.date ? ` — ${a.date}` : ''}</p>
-              {a.workTitle && <p class="pub-meta">「{a.workTitle}」</p>}
-              {a.recipients && <p class="pub-meta">{a.recipients.join(' / ')}</p>}
-            </div>
-          </li>
-        ))}
+        {sortedAwards.map((a) => {
+          const meta = `${a.org}${a.date ? ` — ${a.date}` : ''}`;
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-popup-kind="Award"
+              data-popup-title={a.title}
+              data-popup-meta={meta}
+              data-popup-abstract={a.abstract ?? (a.workTitle ? `「${a.workTitle}」${a.recipients ? ' — ' + a.recipients.join(' / ') : ''}` : '')}
+              data-popup-url={a.url ?? ''}
+              data-popup-pdf={a.pdf ?? ''}
+            >
+              <span class="timeline-year">{a.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">{a.title}</p>
+                <p class="pub-meta">{meta}</p>
+                {a.workTitle && <p class="pub-meta">「{a.workTitle}」</p>}
+                {a.recipients && <p class="pub-meta">{a.recipients.join(' / ')}</p>}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
 
@@ -330,6 +378,18 @@ const jsonLd = {
     </section>
 
   </div>
+
+  <!-- Shared detail popup for Publications / Presentations / Grants / Awards -->
+  <div class="research-popup" id="research-popup" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="research-popup-title">
+    <div class="research-popup-panel">
+      <button type="button" class="research-popup-close" id="research-popup-close" aria-label="閉じる">×</button>
+      <p class="research-popup-eyebrow" id="research-popup-eyebrow"></p>
+      <h3 class="research-popup-title" id="research-popup-title"></h3>
+      <p class="research-popup-meta" id="research-popup-meta"></p>
+      <p class="research-popup-abstract" id="research-popup-abstract"></p>
+      <div class="research-popup-links" id="research-popup-links"></div>
+    </div>
+  </div>
 </BaseLayout>
 
 <script>
@@ -356,6 +416,80 @@ const jsonLd = {
         r.style.display = r.dataset.pubType === filter ? '' : 'none';
       });
     });
+  });
+
+  // ── Shared "detail" popup for Publications / Presentations / Grants / Awards ──
+  const popup = document.getElementById('research-popup');
+  const popupClose = document.getElementById('research-popup-close');
+  const popupEyebrow = document.getElementById('research-popup-eyebrow');
+  const popupTitle = document.getElementById('research-popup-title');
+  const popupMeta = document.getElementById('research-popup-meta');
+  const popupAbstract = document.getElementById('research-popup-abstract');
+  const popupLinks = document.getElementById('research-popup-links');
+  const triggers = document.querySelectorAll<HTMLElement>('.research-popup-trigger');
+
+  function addPopupLink(href: string | undefined, label: string) {
+    if (!href || !popupLinks) return;
+    const a = document.createElement('a');
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = label;
+    popupLinks.appendChild(a);
+  }
+
+  function openResearchPopup(trigger: HTMLElement) {
+    if (!popup || !popupTitle || !popupMeta || !popupAbstract || !popupLinks || !popupEyebrow) return;
+    const d = trigger.dataset;
+
+    popupEyebrow.textContent = d.popupKind ?? '';
+    popupTitle.textContent = d.popupTitle ?? '';
+    popupMeta.textContent = d.popupMeta ?? '';
+    popupAbstract.textContent = d.popupAbstract ?? '';
+    popupLinks.innerHTML = '';
+
+    addPopupLink(d.popupUrl, '公式サイト ↗');
+    if (d.popupDoi) {
+      const doiHref = d.popupDoi.startsWith('http') ? d.popupDoi : `https://doi.org/${d.popupDoi}`;
+      addPopupLink(doiHref, `DOI: ${d.popupDoi} ↗`);
+    }
+    addPopupLink(d.popupPdf, 'PDF ↗');
+
+    popup.classList.add('is-open');
+    popup.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeResearchPopup() {
+    popup?.classList.remove('is-open');
+    popup?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  triggers.forEach((trigger) => {
+    trigger.setAttribute('role', 'button');
+    trigger.setAttribute('tabindex', '0');
+
+    trigger.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) return; // let real links behave normally
+      openResearchPopup(trigger);
+    });
+
+    trigger.addEventListener('keydown', (e) => {
+      if ((e.target as HTMLElement).closest('a')) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openResearchPopup(trigger);
+      }
+    });
+  });
+
+  popupClose?.addEventListener('click', closeResearchPopup);
+  popup?.addEventListener('click', (e) => {
+    if (e.target === popup) closeResearchPopup();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeResearchPopup();
   });
 </script>
 
@@ -629,6 +763,34 @@ const jsonLd = {
     line-height: 1.55;
   }
 
+  .pub-title-en {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--color-muted);
+    margin-top: 2px;
+  }
+
+  /* ── Clickable rows/cards that open the detail popup ── */
+  .research-popup-trigger {
+    cursor: pointer;
+    transition: background-color var(--transition), opacity var(--transition);
+  }
+
+  .timeline-row.research-popup-trigger:hover,
+  .timeline-row.research-popup-trigger:focus-visible {
+    background-color: var(--color-hover-bg);
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .grant-card.research-popup-trigger:hover,
+  .grant-card.research-popup-trigger:focus-visible {
+    background-color: var(--color-hover-bg);
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
   .pub-meta {
     font-size: 0.8rem;
     color: var(--color-muted);
@@ -720,6 +882,130 @@ const jsonLd = {
     .grant-card {
       grid-template-columns: 1fr;
       gap: 6px;
+    }
+  }
+
+  /* ── Detail popup ── */
+  .research-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .research-popup.is-open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .research-popup-panel {
+    position: relative;
+    background: var(--color-bg);
+    border: 1px solid var(--preview-border);
+    box-shadow: 0 12px 48px var(--preview-shadow);
+    max-width: 560px;
+    width: 100%;
+    max-height: 84vh;
+    overflow-y: auto;
+    padding: 32px 28px 28px;
+    transform: translateY(6px) scale(0.98);
+    transition: transform 0.2s ease;
+  }
+
+  .research-popup.is-open .research-popup-panel {
+    transform: translateY(0) scale(1);
+  }
+
+  .research-popup-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: none;
+    border: none;
+    color: var(--color-muted);
+    cursor: pointer;
+    font-size: 1.1rem;
+    line-height: 1;
+    padding: 4px 6px;
+    transition: color 0.14s;
+  }
+
+  .research-popup-close:hover {
+    color: var(--color-text);
+  }
+
+  .research-popup-eyebrow {
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin-bottom: 8px;
+  }
+
+  .research-popup-title {
+    font-family: var(--font-serif);
+    font-size: 1.15rem;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--color-text);
+    margin-bottom: 4px;
+    padding-right: 20px;
+  }
+
+  .research-popup-meta {
+    font-size: 0.82rem;
+    color: var(--color-muted);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+
+  .research-popup-abstract {
+    font-size: 0.88rem;
+    line-height: 1.8;
+    color: var(--color-text);
+    margin-bottom: 20px;
+    white-space: pre-line;
+  }
+
+  .research-popup-abstract:empty {
+    display: none;
+    margin-bottom: 0;
+  }
+
+  .research-popup-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+  }
+
+  .research-popup-links a {
+    font-size: 0.85rem;
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    padding: 6px 14px;
+    transition: border-color var(--transition), color var(--transition);
+  }
+
+  .research-popup-links a:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .research-popup,
+    .research-popup-panel {
+      transition: opacity 0.15s ease;
+    }
+    .research-popup-panel {
+      transform: none !important;
     }
   }
 </style>
