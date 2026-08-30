@@ -21,6 +21,17 @@ function formatDateRange(start: Date, end?: Date): string {
   }
   return `${s} – ${end.toLocaleDateString('ja-JP', opts)}`;
 }
+
+// A row's preview is a *fragment* of the exhibition, not its documentation
+// cover: previewImage (hand-picked) takes priority, falling back to the
+// first documentation image, then the cover as a last resort.
+function previewFor(data: (typeof sortedEntries)[number]['data']) {
+  if (data.previewImage) return data.previewImage;
+  const first = data.images[0];
+  if (first) return { src: first.src, alt: first.alt ?? first.caption ?? data.title };
+  if (data.cover) return { src: data.cover, alt: data.title };
+  return null;
+}
 ---
 
 <BaseLayout title="Exhibitions" description="展示記録の一覧">
@@ -29,33 +40,197 @@ function formatDateRange(start: Date, end?: Date): string {
     <p>{sortedEntries.length} exhibitions</p>
   </div>
 
-  <ul class="exh-list">
-    {sortedEntries.map((entry) => (
-      <li>
-        <a
-          href={`/exhibitions/${entry.id.replace(/\.md$/, '')}/`}
-          class="exh-item"
-        >
-          <span class="exh-item-year">{entry.data.year}</span>
-          <div class="exh-item-body">
-            <span class="exh-item-type">{entry.data.type}</span>
-            <span class="exh-item-title">{entry.data.title}</span>
-            <span class="exh-item-venue">
-              {entry.data.venue}, {entry.data.city}
-              {entry.data.country !== 'Japan' && `, ${entry.data.country}`}
-              <span style="margin-left: 8px; color: var(--color-border);">|</span>
-              <span style="margin-left: 8px;">{formatDateRange(entry.data.startDate, entry.data.endDate)}</span>
-            </span>
-            {entry.data.tags.length > 0 && (
-              <div class="exh-item-tags">
-                {entry.data.tags.map((tag) => (
-                  <span class="tag">{tag}</span>
-                ))}
-              </div>
-            )}
-          </div>
-        </a>
-      </li>
-    ))}
+  <ul class="exh-list" id="exh-list">
+    {sortedEntries.map((entry) => {
+      const preview = previewFor(entry.data);
+      return (
+        <li>
+          <a
+            href={`/exhibitions/${entry.id.replace(/\.md$/, '')}/`}
+            class="exh-item"
+            data-preview-src={preview?.src}
+            data-preview-alt={preview?.alt ?? entry.data.title}
+          >
+            <span class="exh-item-year">{entry.data.year}</span>
+            <div class="exh-item-body">
+              <span class="exh-item-type">{entry.data.type}</span>
+              <span class="exh-item-title">{entry.data.title}</span>
+              {preview && (
+                <img
+                  class="exh-item-fragment"
+                  src={preview.src}
+                  alt={preview.alt ?? entry.data.title}
+                  loading="lazy"
+                  style={preview.mobileCropPosition ? `object-position:${preview.mobileCropPosition}` : undefined}
+                />
+              )}
+              <span class="exh-item-venue">
+                {entry.data.venue}, {entry.data.city}
+                {entry.data.country !== 'Japan' && `, ${entry.data.country}`}
+                <span style="margin-left: 8px; color: var(--color-border);">|</span>
+                <span style="margin-left: 8px;">{formatDateRange(entry.data.startDate, entry.data.endDate)}</span>
+              </span>
+              {entry.data.tags.length > 0 && (
+                <div class="exh-item-tags">
+                  {entry.data.tags.map((tag) => (
+                    <span class="tag">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </a>
+        </li>
+      );
+    })}
   </ul>
+
+  <div class="exh-preview" id="exh-preview" aria-hidden="true">
+    <img class="exh-preview-img" id="exh-preview-img" alt="" />
+  </div>
 </BaseLayout>
+
+<style>
+  /* ── Row hover / focus dimming (desktop only; harmless no-op elsewhere) ── */
+  .exh-item {
+    transition: opacity var(--transition);
+  }
+
+  .exh-list.has-active .exh-item:not(.is-active) {
+    opacity: 0.72;
+  }
+
+  /* ── Mobile image fragment: hidden on desktop, a thin strip on mobile ── */
+  .exh-item-fragment {
+    display: none;
+  }
+
+  /* ── Floating desktop preview ──
+     Fixed, non-interactive, vertically centered; JS only ever toggles which
+     side (left/right) it sits on and whether it's visible. Sized as a
+     visual layer (up to ~48vw), never as a portfolio thumbnail. */
+  .exh-preview {
+    position: fixed;
+    top: 50%;
+    right: 24px;
+    z-index: 8; /* above content, below site-header (10) and any modal overlay */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.985);
+    transition: opacity 220ms ease, transform 220ms ease;
+  }
+
+  .exh-preview.is-visible {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+
+  .exh-preview-img {
+    display: block;
+    max-width: 48vw;
+    max-height: 72vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    background: var(--color-bg);
+    border: 1px solid var(--preview-border);
+    box-shadow: 0 8px 32px var(--preview-shadow);
+  }
+
+  @media (max-width: 768px) {
+    .exh-preview {
+      display: none;
+    }
+
+    .exh-item-fragment {
+      display: block;
+      width: 100%;
+      height: clamp(96px, 26vw, 140px);
+      object-fit: cover;
+      margin: 6px 0 2px;
+      border: 1px solid var(--preview-border);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .exh-item {
+      transition: none;
+    }
+    .exh-preview {
+      transition: opacity 150ms ease;
+      transform: translateY(-50%) !important;
+    }
+  }
+</style>
+
+<script>
+  const list = document.getElementById('exh-list');
+  const preview = document.getElementById('exh-preview') as HTMLElement | null;
+  const previewImg = document.getElementById('exh-preview-img') as HTMLImageElement | null;
+  const rows = document.querySelectorAll<HTMLAnchorElement>('.exh-item[data-preview-src]');
+
+  if (list && preview && previewImg && rows.length > 0) {
+    let activeRow: HTMLAnchorElement | null = null;
+
+    function showPreview(row: HTMLAnchorElement, clientX: number) {
+      const src = row.dataset.previewSrc;
+      if (!src || !preview || !previewImg) return;
+
+      if (previewImg.getAttribute('src') !== src) {
+        previewImg.src = src;
+        previewImg.alt = row.dataset.previewAlt ?? '';
+      }
+
+      // Anchor the layer to the cursor's starting side, expanding into
+      // whichever half of the viewport is currently empty rather than
+      // tracking the cursor continuously (keeps the motion quiet).
+      const onLeftHalf = clientX < window.innerWidth / 2;
+      if (onLeftHalf) {
+        preview.style.left = 'auto';
+        preview.style.right = '24px';
+      } else {
+        preview.style.right = 'auto';
+        preview.style.left = '24px';
+      }
+
+      preview.classList.add('is-visible');
+      row.classList.add('is-active');
+      list?.classList.add('has-active');
+      activeRow = row;
+    }
+
+    function hidePreview(row: HTMLAnchorElement) {
+      row.classList.remove('is-active');
+      if (activeRow !== row) return;
+      preview?.classList.remove('is-visible');
+      list?.classList.remove('has-active');
+      activeRow = null;
+    }
+
+    rows.forEach((row) => {
+      row.addEventListener('mouseenter', (e) => showPreview(row, e.clientX));
+      row.addEventListener('mouseleave', () => hidePreview(row));
+      row.addEventListener('focus', () => showPreview(row, row.getBoundingClientRect().left));
+      row.addEventListener('blur', () => hidePreview(row));
+    });
+
+    // Preload preview images as their rows approach the viewport, so the
+    // hover reveal itself never waits on a network fetch.
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            const src = (entry.target as HTMLAnchorElement).dataset.previewSrc;
+            if (src) {
+              const img = new Image();
+              img.src = src;
+            }
+            io.unobserve(entry.target);
+          });
+        },
+        { rootMargin: '200px 0px' }
+      );
+      rows.forEach((row) => io.observe(row));
+    }
+  }
+</script>

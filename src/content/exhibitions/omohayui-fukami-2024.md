@@ -14,6 +14,10 @@ artists:
   - "Marco Rossetti"
 description: "富山県砺波市の古民家ギャラリー、ギャラリー無量での企画展。ギャラリー無量キュレーション公募2024採択企画。東京中心主義的な現代アートの趨勢に対し、富山・日本海側の地政学的な風景と、白壁・畳・仏間・神棚が混在する会場の支持体から、「顔のおぼろげな形象」を再考した。"
 cover: "/exhibition_image/toyama/main.jpg"
+previewImage:
+  src: "/exhibition_image/toyama/kotaro_2_reduce.jpg"
+  alt: "田中小太郎作品、モーターとワイヤーの接続部ディテール"
+  mobileCropPosition: "50% 55%"
 images:
   - src: "/exhibition_image/toyama/all_1_reduce.jpg"
     caption: "展示風景"

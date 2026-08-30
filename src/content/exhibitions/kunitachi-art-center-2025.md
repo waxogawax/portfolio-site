@@ -11,6 +11,10 @@ role: "6okkenとして参加"
 artists: []
 description: "国立市を中心とする13会場を舞台に22組が参加した芸術祭「Kunitachi Art Center 2025」。テーマは「I'm Learning.」。6okkenは参加団体の一組として、国立駅前に誰でも座れるベンチ〈i'm-air-port〉を制作・設置した。"
 cover: "/exhibition_image/kac/C78D3688-FFC8-4EE5-A848-FDA5275B7AA0.jpg"
+previewImage:
+  src: "/exhibition_image/kac/DSCF3339.jpg"
+  alt: "ベンチの丸い切り欠きに差し込まれる手、制作風景のディテール"
+  mobileCropPosition: "55% 45%"
 images:
   - src: "/exhibition_image/kac/8C4CD510-EF75-42A8-A1FF-1215F0E72D38.jpg"
     caption: "〈i'm-air-port〉ステートメントパネル"

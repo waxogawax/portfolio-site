@@ -13,6 +13,10 @@ artists:
   - "菊地晴"
 description: "「ファミリーレストラン」を、郊外における家族、親密さ、気軽さを形成するイマジナリーな装置として捉え直したインスタレーション。Terrace Art Shonan AWARD 2024 オーディエンス賞。"
 cover: "/exhibition_image/terrace/main.jpg"
+previewImage:
+  src: "/exhibition_image/terrace/DSCF0470.jpg"
+  alt: "樹木越しに見える幾何形の発光オブジェと案内サイン、夜の館内"
+  mobileCropPosition: "50% 40%"
 images:
   - src: "/exhibition_image/terrace/DSCF0470.jpg"
     caption: "展示風景"

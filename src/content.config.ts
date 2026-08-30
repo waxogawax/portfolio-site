@@ -39,12 +39,21 @@ const exhibitions = defineCollection({
     artists: z.array(z.string()).default([]),
     description: z.string().optional(),
     cover: z.string().optional(),
+    previewImage: z
+      .object({
+        src: z.string(),
+        alt: z.string().optional(),
+        focalPoint: z.object({ x: z.number(), y: z.number() }).optional(),
+        mobileCropPosition: z.string().optional(),
+      })
+      .optional(),
     images: z
       .array(
         z.object({
           src: z.string(),
           caption: z.string().optional(),
           alt: z.string().optional(),
+          credit: z.string().optional(),
         })
       )
       .default([]),

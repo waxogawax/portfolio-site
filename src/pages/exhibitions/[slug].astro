@@ -117,8 +117,12 @@ function formatDateRange(start: Date, end?: Date): string {
         {d.images.map((img) => (
           <figure class="exh-gallery-item exh-img-wrap">
             <img src={img.src} alt={img.alt ?? img.caption ?? d.title} loading="lazy" class="exh-img" />
-            {img.caption && (
-              <figcaption class="exh-gallery-caption">{img.caption}</figcaption>
+            {(img.caption || img.credit) && (
+              <figcaption class="exh-gallery-caption">
+                {img.caption}
+                {img.caption && img.credit && ' '}
+                {img.credit && <span class="exh-gallery-credit">© {img.credit}</span>}
+              </figcaption>
             )}
           </figure>
         ))}
@@ -296,6 +300,10 @@ function formatDateRange(start: Date, end?: Date): string {
 
   .exh-gallery-item img {
     cursor: zoom-in;
+  }
+
+  .exh-gallery-credit {
+    opacity: 0.75;
   }
 
   .exh-video {
