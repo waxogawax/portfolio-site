@@ -10,10 +10,16 @@
   <button id="term-popup-close" aria-label="閉じる">×</button>
 </div>
 
-<style>
+<style is:global>
   /*
    * Full-viewport overlay: nodes can be dragged anywhere without clipping.
    * z-index 5 sits above home-container (z-index:1) and below site-header (z-index:10).
+   *
+   * is:global because the node/edge SVG elements are created in JS via
+   * createElementNS and never receive Astro's data-astro-cid-* scope
+   * attribute — a scoped <style> block would never match them. IDs below
+   * (#floating-network, #network-svg, #term-popup*) are unique to this
+   * component's single instance per page, so global scope is safe.
    */
   #floating-network {
     position: fixed;
@@ -33,17 +39,17 @@
     overflow: visible;
   }
 
-  /* ── Term popup ── */
+  /* ── Term popup (network tooltip) ── */
   #term-popup {
     display: none;
     position: fixed;
     z-index: 300;
-    background: var(--color-bg);
-    border: 1px solid var(--color-text);
+    background: var(--network-tooltip-bg);
+    border: 1px solid var(--network-tooltip-border);
     padding: 14px 18px 16px;
     min-width: 160px;
     max-width: 240px;
-    box-shadow: 2px 2px 0 var(--color-text);
+    box-shadow: 2px 2px 0 var(--network-tooltip-border);
     pointer-events: auto;
   }
 
@@ -52,7 +58,7 @@
     font-weight: 500;
     letter-spacing: 0.10em;
     text-transform: uppercase;
-    color: var(--color-text);
+    color: var(--network-tooltip-text);
     margin-bottom: 10px;
     padding-bottom: 8px;
     border-bottom: 1px solid var(--color-border);
@@ -69,7 +75,7 @@
   #term-popup-links li a {
     font-size: 0.85rem;
     font-weight: 500;
-    color: var(--color-text);
+    color: var(--network-tooltip-text);
     letter-spacing: 0.03em;
     display: flex;
     align-items: center;
@@ -81,7 +87,7 @@
   #term-popup-links li a::after {
     content: "→";
     font-size: 0.80em;
-    color: var(--color-muted);
+    color: var(--network-control);
   }
 
   #term-popup-links li a:hover { opacity: 0.55; }
@@ -92,17 +98,46 @@
     right: 8px;
     background: none;
     border: none;
-    color: var(--color-muted);
+    color: var(--network-control);
     cursor: pointer;
     font-size: 1rem;
     line-height: 1;
     padding: 2px 4px;
     transition: color 0.14s;
   }
-  #term-popup-close:hover { color: var(--color-text); }
+  #term-popup-close:hover { color: var(--network-control-hover); }
+
+  /* Network nodes/edges color via CSS custom properties — see script below,
+     which only assigns classes, never colors, to dynamically created SVG els. */
+  #network-svg .network-node-label {
+    fill: var(--network-node);
+    transition: fill 0.15s ease;
+  }
+  #network-svg .network-node-label.is-hovered {
+    fill: var(--network-hover);
+  }
+  #network-svg .network-node-label.is-active {
+    fill: var(--network-active);
+  }
+  #network-svg .network-edge {
+    stroke: var(--network-edge);
+    transition: stroke 0.15s ease;
+  }
+  #network-svg .network-edge.is-hovered {
+    stroke: var(--network-hover);
+  }
 
   @media (prefers-color-scheme: dark) {
     #floating-network { mix-blend-mode: screen; opacity: 0.52; }
+  }
+
+  :root[data-theme='dark'] #floating-network {
+    mix-blend-mode: screen;
+    opacity: 0.52;
+  }
+  :root[data-theme='light'] #floating-network {
+    mix-blend-mode: multiply;
+    opacity: 0.88;
   }
 
   @media (max-width: 900px) {
@@ -112,8 +147,13 @@
 </style>
 
 <script>
-// All SVG element styles set directly in JS — Astro scoped CSS does not
-// reach dynamically created elements (no data-astro-cid-* attribute).
+// Position/opacity/size are set directly as attributes every frame (perf).
+// Color is intentionally NOT set here: nodes/edges get a class name only
+// (.network-node-label / .network-edge, plus .is-hovered / .is-active),
+// and the global <style is:global> block above resolves the actual color
+// from --network-* CSS custom properties, which are theme-dependent.
+// That's what makes the graph re-color instantly on a theme switch with no
+// re-render needed.
 //
 // Physics model: Kuramoto phase-synchronization × mycelial edge growth × semantic
 // repulsion. Each term is an oscillator (theta, omega). A graph-derived similarity
@@ -124,7 +164,6 @@
 //   - spatial repulsion, keeping semantically distant terms apart
 // Drag/click/popup navigation is unchanged from the previous implementation.
 
-const BLUE = "#0000ff";
 const TAU  = Math.PI * 2;
 
 const LAYER = {
@@ -362,7 +401,7 @@ if (svg && container && popup) {
       for (let j = i + 1; j < N; j++) {
         if (S[i][j] < 0.18) continue;
         const el = mkEl("line");
-        el.setAttribute("stroke", BLUE);
+        el.setAttribute("class", "network-edge");
         el.setAttribute("fill", "none");
         el.style.pointerEvents = "none";
         svg.appendChild(el);
@@ -379,7 +418,7 @@ if (svg && container && popup) {
       const textEl = mkEl("text");
       textEl.setAttribute("x",             n.x);
       textEl.setAttribute("y",             n.y);
-      textEl.setAttribute("fill",          BLUE);
+      textEl.setAttribute("class",         "network-node-label");
       textEl.setAttribute("opacity",       String(LAYER.opacity[t.layer]));
       textEl.setAttribute("font-size",     LAYER.fontSize[t.layer]);
       textEl.setAttribute("font-family",   "inherit");
@@ -405,8 +444,8 @@ if (svg && container && popup) {
 
       // Hover: highlight this node; connected mycelium threads are boosted
       // per-frame in the render loop (see below).
-      textEl.addEventListener("mouseenter", () => { hoveredId = t.id; });
-      textEl.addEventListener("mouseleave", () => { hoveredId = null; });
+      textEl.addEventListener("mouseenter", () => { hoveredId = t.id; textEl.classList.add("is-hovered"); });
+      textEl.addEventListener("mouseleave", () => { hoveredId = null; textEl.classList.remove("is-hovered"); });
     });
 
     cancelAnimationFrame(rafId);
@@ -585,6 +624,7 @@ if (svg && container && popup) {
 
       el.setAttribute("opacity",      String(hovered ? Math.max(baseOpacity, 0.40) : baseOpacity));
       el.setAttribute("stroke-width", String(hovered ? Math.max(baseWidth, 0.85)   : baseWidth));
+      el.classList.toggle("is-hovered", hovered);
     }
 
     rafId = requestAnimationFrame(animate);
@@ -655,6 +695,7 @@ if (svg && container && popup) {
     draggingId      = id;
     dragStartClient = { x: e.clientX, y: e.clientY };
     textEl.style.cursor = "grabbing";
+    textEl.classList.add("is-active");
 
     const svgP  = svgCoords(e.clientX, e.clientY);
     dragOffsetX = svgP.x - state[id].x;
@@ -682,7 +723,10 @@ if (svg && container && popup) {
     const dy = e.clientY - (dragStartClient?.y ?? e.clientY);
     const wasDrag = Math.sqrt(dx * dx + dy * dy) >= DRAG_PX;
 
-    if (nodeEls[id]) nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
+    if (nodeEls[id]) {
+      nodeEls[id].style.cursor = TERM_PAGES[id] ? "pointer" : "grab";
+      nodeEls[id].classList.remove("is-active");
+    }
     // anchor the home spring to the dropped location so it doesn't snap back
     state[id].bx    = state[id].x;
     state[id].by    = state[id].y;

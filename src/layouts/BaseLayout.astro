@@ -12,6 +12,17 @@ const currentPath = Astro.url.pathname;
 
 <html lang="ja">
   <head>
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var theme = stored === 'light' || stored === 'dark'
+            ? stored
+            : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', theme);
+        } catch (e) {}
+      })();
+    </script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description ?? ''} />
@@ -32,6 +43,10 @@ const currentPath = Astro.url.pathname;
           <a href="/diary/" class:list={['nav-link', { active: currentPath.startsWith('/diary') }]}>Diary</a>
           <a href="/research/" class:list={['nav-link', { active: currentPath.startsWith('/research') }]}>Research</a>
           <a href="/about/" class:list={['nav-link', { active: currentPath.startsWith('/about') }]}>About</a>
+          <span class="nav-divider" aria-hidden="true"></span>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="ダークモードを切り替える">
+            <span class="theme-toggle-icon" aria-hidden="true"></span>
+          </button>
         </nav>
       </div>
     </header>
@@ -48,6 +63,41 @@ const currentPath = Astro.url.pathname;
   </body>
 </html>
 
+<script>
+  const root   = document.documentElement;
+  const toggle = document.getElementById('theme-toggle');
+
+  function isDark() {
+    return root.getAttribute('data-theme') === 'dark';
+  }
+
+  function updateToggleLabel() {
+    if (!toggle) return;
+    toggle.setAttribute('aria-label', isDark() ? 'ライトモードに切り替える' : 'ダークモードに切り替える');
+  }
+
+  updateToggleLabel();
+
+  toggle?.addEventListener('click', () => {
+    const next = isDark() ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('theme', next); } catch (e) {}
+    updateToggleLabel();
+  });
+
+  // Live-update on system preference change, but only while the user hasn't
+  // made an explicit choice (no stored override in localStorage).
+  try {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+      let stored = null;
+      try { stored = localStorage.getItem('theme'); } catch (err) {}
+      if (stored === 'light' || stored === 'dark') return;
+      root.setAttribute('data-theme', e.matches ? 'dark' : 'light');
+      updateToggleLabel();
+    });
+  } catch (e) {}
+</script>
+
 <style is:global>
   /* ── Reset & Base ── */
   *, *::before, *::after {
@@ -57,13 +107,32 @@ const currentPath = Astro.url.pathname;
   }
 
   :root {
-    --color-bg:        #e6e7e8;
-    --color-text:      #0000ff;
-    --color-muted:     #5555aa;
-    --color-accent:    #000099;
-    --color-neon:      #ffff00;
-    --color-border:    #c4c6c8;
-    --color-hover-bg:  #dadcdd;
+    --color-bg:          #e6e7e8;
+    --color-text:        #0000ff;
+    --color-muted:       #5555aa;
+    --color-accent:      #000099;
+    --color-neon:        #ffff00;
+    --color-border:      #c4c6c8;
+    --color-hover-bg:    #dadcdd;
+    --color-card-bg:     #ffffff;
+    --color-card-shadow: rgba(0, 0, 0, 0.07);
+
+    /* ── Network visualization semantic tokens ──
+       Aliased to the palette above so a single theme switch re-colors the
+       whole graph; kept as distinct --network-* names so the visualization
+       never needs to read a generic --color-* var directly. */
+    --network-node:           var(--color-text);
+    --network-node-fill:      var(--color-text);
+    --network-edge:           var(--color-text);
+    --network-label:          var(--color-text);
+    --network-hover:          var(--color-neon);
+    --network-active:         var(--color-accent);
+    --network-bg:             var(--color-bg);
+    --network-control:        var(--color-muted);
+    --network-control-hover:  var(--color-text);
+    --network-tooltip-bg:     var(--color-bg);
+    --network-tooltip-border: var(--network-node);
+    --network-tooltip-text:   var(--network-label);
 
     --font-sans:   'Inter', system-ui, sans-serif;
     --font-serif:  'Noto Serif JP', Georgia, serif;
@@ -75,6 +144,35 @@ const currentPath = Astro.url.pathname;
     --transition: 0.18s ease;
   }
 
+  /* System preference, unless the user picked a theme explicitly (data-theme is
+     then set on <html> and takes priority via the block below). */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --color-bg:          #0e0f14;
+      --color-text:        #7ea8ff;
+      --color-muted:       #9098c9;
+      --color-accent:      #aac4ff;
+      --color-neon:        #f2ff4d;
+      --color-border:      #2e303c;
+      --color-hover-bg:    #1a1c26;
+      --color-card-bg:     #15161e;
+      --color-card-shadow: rgba(0, 0, 0, 0.55);
+    }
+  }
+
+  /* Explicit user choice, saved to localStorage by the theme toggle. */
+  :root[data-theme='dark'] {
+    --color-bg:          #0e0f14;
+    --color-text:        #7ea8ff;
+    --color-muted:       #9098c9;
+    --color-accent:      #aac4ff;
+    --color-neon:        #f2ff4d;
+    --color-border:      #2e303c;
+    --color-hover-bg:    #1a1c26;
+    --color-card-bg:     #15161e;
+    --color-card-shadow: rgba(0, 0, 0, 0.55);
+  }
+
   html {
     background-color: var(--color-bg);
     color: var(--color-text);
@@ -82,6 +180,7 @@ const currentPath = Astro.url.pathname;
     font-size: 16px;
     line-height: 1.8;
     -webkit-font-smoothing: antialiased;
+    transition: background-color var(--transition), color var(--transition);
   }
 
   a {
@@ -179,6 +278,36 @@ const currentPath = Astro.url.pathname;
 
   .nav-link.active {
     color: var(--color-text);
+  }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 0.85rem;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    transition: color var(--transition), border-color var(--transition), background-color var(--transition);
+  }
+
+  .theme-toggle:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .theme-toggle-icon::before {
+    content: '\263E'; /* ☾ — click to go dark */
+  }
+
+  :root[data-theme='dark'] .theme-toggle-icon::before {
+    content: '\2600'; /* ☀ — click to go light */
   }
 
   /* ── Main ── */
@@ -300,14 +429,14 @@ const currentPath = Astro.url.pathname;
     gap: 12px;
     padding: 24px;
     border: 1px solid var(--color-border);
-    background-color: #fff;
-    transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+    background-color: var(--color-card-bg);
+    transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition), background-color var(--transition);
   }
 
   .works-card:hover {
     border-color: var(--color-accent);
     transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+    box-shadow: 0 4px 20px var(--color-card-shadow);
   }
 
   .works-card-title {

@@ -104,7 +104,7 @@ const collectionLabels: Record<string, string> = {
                 <line
                   x1={src.x} y1={src.y}
                   x2={tgt.x} y2={tgt.y}
-                  stroke="var(--color-border)"
+                  stroke="var(--network-edge)"
                   stroke-width="1"
                   stroke-dasharray="3 2"
                   opacity="0.6"
@@ -117,7 +117,7 @@ const collectionLabels: Record<string, string> = {
               <line
                 x1={cx} y1={cy}
                 x2={n.x} y2={n.y}
-                stroke="var(--color-border)"
+                stroke="var(--network-edge)"
                 stroke-width="1"
                 opacity="0.9"
               />
@@ -126,8 +126,8 @@ const collectionLabels: Record<string, string> = {
             <!-- Center node (current page) -->
             <circle
               cx={cx} cy={cy} r="6"
-              fill="var(--color-bg)"
-              stroke="var(--color-text)"
+              fill="var(--network-bg)"
+              stroke="var(--network-node)"
               stroke-width="1.5"
             />
 
@@ -136,7 +136,7 @@ const collectionLabels: Record<string, string> = {
               <a href={n.url} class="svg-term-link">
                 <circle
                   cx={n.x} cy={n.y} r="4"
-                  fill="var(--color-text)"
+                  fill="var(--network-node-fill)"
                   opacity="0.65"
                   class="svg-node"
                 />
@@ -145,7 +145,7 @@ const collectionLabels: Record<string, string> = {
                   text-anchor={n.anchor}
                   font-size="8.5"
                   font-family="var(--font-sans)"
-                  fill="var(--color-text)"
+                  fill="var(--network-label)"
                   class="svg-label"
                 >
                   {n.label}
@@ -273,21 +273,23 @@ const collectionLabels: Record<string, string> = {
   }
 
   .svg-node {
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, fill 0.15s ease;
   }
 
   .svg-term-link:hover .svg-node {
     opacity: 1;
+    fill: var(--network-hover);
   }
 
   .svg-label {
     text-decoration: none;
-    transition: opacity 0.15s ease;
+    transition: opacity 0.15s ease, fill 0.15s ease;
   }
 
   .svg-term-link:hover .svg-label {
+    fill: var(--network-hover);
     text-decoration: underline;
-    text-decoration-color: var(--color-text);
+    text-decoration-color: var(--network-hover);
   }
 
   /* ── Sections ── */
