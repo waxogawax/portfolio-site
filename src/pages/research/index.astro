@@ -5,6 +5,7 @@ import {
   researchInterests,
   currentResearch,
   publicationsPeerReviewed,
+  publicationsBookChapters,
   publicationsMisc,
   presentations,
   grants,
@@ -21,6 +22,7 @@ const byYearDesc = <T extends { year: number }>(items: T[]) =>
   [...items].sort((a, b) => b.year - a.year);
 
 const sortedPeerReviewed = byYearDesc(publicationsPeerReviewed);
+const sortedBookChapters = byYearDesc(publicationsBookChapters);
 const sortedMisc = byYearDesc(publicationsMisc);
 const sortedPresentations = byYearDesc(presentations);
 const sortedAwards = byYearDesc(awards);
@@ -132,6 +134,7 @@ const jsonLd = {
       <div class="pub-filter" role="group" aria-label="Publications フィルター">
         <button type="button" class="pub-filter-btn is-active" data-filter="all">All</button>
         <button type="button" class="pub-filter-btn" data-filter="peer-reviewed">Peer-reviewed</button>
+        <button type="button" class="pub-filter-btn" data-filter="book-chapter">Book Chapters</button>
         <button type="button" class="pub-filter-btn" data-filter="essay">Essay</button>
       </div>
 
@@ -158,6 +161,34 @@ const jsonLd = {
                 <p class="pub-tags">
                   {pub.peerReviewed && <span class="pub-tag">査読有り</span>}
                   {pub.firstAuthor && <span class="pub-tag">筆頭著者</span>}
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <h3 class="subsection-heading" data-pub-group="book-chapter">Book Chapters</h3>
+      <ul class="timeline-list" data-pub-group="book-chapter">
+        {sortedBookChapters.map((b) => {
+          const meta = `${b.editors.join('・')} 編 — ${b.publisher}${b.date ? `, ${b.date}` : ''}${b.pages ? ` — pp.${b.pages}` : ''}`;
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-pub-type="book-chapter"
+              data-popup-kind="Book Chapter"
+              data-popup-title={b.titleJa}
+              data-popup-meta={meta}
+              data-popup-abstract={b.abstract ?? (b.isbn ? `ISBN ${b.isbn}` : '')}
+              data-popup-links={b.links ? JSON.stringify(b.links) : ''}
+            >
+              <span class="timeline-year">{b.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">{b.titleJa}</p>
+                <p class="pub-meta">{meta}</p>
+                <p class="pub-tags">
+                  {b.role && <span class="pub-tag">{b.role}</span>}
+                  {b.isbn && <span class="pub-tag">ISBN {b.isbn}</span>}
                 </p>
               </div>
             </li>
@@ -454,6 +485,14 @@ const jsonLd = {
       addPopupLink(doiHref, `DOI: ${d.popupDoi} ↗`);
     }
     addPopupLink(d.popupPdf, 'PDF ↗');
+    if (d.popupLinks) {
+      try {
+        const extraLinks: { label: string; url: string }[] = JSON.parse(d.popupLinks);
+        extraLinks.forEach((l) => addPopupLink(l.url, `${l.label} ↗`));
+      } catch {
+        // ignore malformed data
+      }
+    }
 
     popup.classList.add('is-open');
     popup.setAttribute('aria-hidden', 'false');

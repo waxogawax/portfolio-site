@@ -114,6 +114,36 @@ export const publicationsPeerReviewed: PeerReviewedPublication[] = [
   },
 ];
 
+export interface BookChapter {
+  year: number;
+  titleJa: string;
+  editors: string[];
+  publisher: string;
+  date?: string;
+  pages?: string;
+  role?: string;
+  isbn?: string;
+  abstract?: string | null;
+  links?: { label: string; url: string }[];
+}
+
+export const publicationsBookChapters: BookChapter[] = [
+  {
+    year: 2021,
+    titleJa: '子どものことばを育てる——聞こえの問題に役立つ知識と訓練・指導',
+    editors: ['能登谷晶子', '原田浩美'],
+    publisher: '協同医書出版社',
+    date: '2021-12',
+    pages: '53–61',
+    role: '分担執筆',
+    isbn: '978-4-7639-3058-3',
+    links: [
+      { label: '国立国会図書館サーチ', url: 'https://ndlsearch.ndl.go.jp/books/R100000002-I031889550' },
+      { label: '協同医書出版社（出版社情報）', url: 'https://www.kyodo-isho.co.jp/book/b10025897.html' },
+    ],
+  },
+];
+
 export interface MiscPublication {
   year: number;
   titleJa: string;
