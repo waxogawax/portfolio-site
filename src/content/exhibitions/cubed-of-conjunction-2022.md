@@ -25,7 +25,9 @@ images:
     alt: "展示風景"
   - src: "/exhibition_image/conjunction/9a514e9e-8288-4c18-9766-d5d4a27c5049.jpg"
     alt: "展示風景"
-links: []
+links:
+  - label: "慶應SFC学会（開催告知・助成記録）"
+    url: "https://gakkai.sfc.keio.ac.jp/sfcplat/3-cubed-of-conjunction.html"
 press:
   - title: "（ . . . ）³ cubed of conjunction（新宿眼科画廊 スペースO）"
     publication: "美術手帖"

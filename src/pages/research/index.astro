@@ -14,6 +14,7 @@ import {
   experience,
   education,
   academicService,
+  selectedPrograms,
 } from '../../data/researchData.ts';
 
 export const prerender = true;
@@ -28,6 +29,7 @@ const sortedPresentations = byYearDesc(presentations);
 const sortedAwards = byYearDesc(awards);
 const sortedTeaching = byYearDesc(teaching);
 const sortedAcademicService = byYearDesc(academicService);
+const sortedSelectedPrograms = byYearDesc(selectedPrograms);
 
 const navItems = [
   { href: '#research', label: 'Research' },
@@ -38,6 +40,7 @@ const navItems = [
   { href: '#teaching', label: 'Teaching' },
   { href: '#experience', label: 'Experience' },
   { href: '#education', label: 'Education' },
+  { href: '#selected-programs', label: 'Selected Programs' },
 ];
 
 const jsonLd = {
@@ -393,6 +396,32 @@ const jsonLd = {
             </div>
           </li>
         ))}
+      </ul>
+    </section>
+
+    <!-- Selected Programs / Fellowships -->
+    <section id="selected-programs" class="research-block">
+      <h2 class="section-heading">Selected Programs</h2>
+      <ul class="timeline-list">
+        {sortedSelectedPrograms.map((p) => {
+          const meta = `${p.org}${p.role ? ` — ${p.role}` : ''}`;
+          return (
+            <li
+              class="timeline-row research-popup-trigger"
+              data-popup-kind="Selected Program"
+              data-popup-title={p.title}
+              data-popup-meta={meta}
+              data-popup-abstract={p.abstract ?? ''}
+              data-popup-url={p.url ?? ''}
+            >
+              <span class="timeline-year">{p.year}</span>
+              <div class="timeline-content">
+                <p class="pub-title">{p.title}</p>
+                <p class="pub-meta">{meta}</p>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
 

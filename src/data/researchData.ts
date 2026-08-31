@@ -209,6 +209,14 @@ export const presentations: Presentation[] = [
   },
   {
     year: 2025,
+    title: { ja: '展示でフィールドワークする2025 フィリピン編' },
+    institution: '東京外国語大学 アジア・アフリカ言語文化研究所',
+    event: 'TUFS Field Science Commons（TUFiSCo）Guest Curator / Talk',
+    date: '2025-10-12',
+    url: 'https://www.tufs.ac.jp/tufisco/',
+  },
+  {
+    year: 2025,
     title: { ja: '展示でフィールドワークする2025 スリランカ編' },
     institution: '東京外国語大学 アジア・アフリカ言語文化研究所',
     date: '2025-02-17',
@@ -218,6 +226,15 @@ export const presentations: Presentation[] = [
     title: { ja: 'みなとメディアミュージアム2020→2021実践報告' },
     event: '環境芸術学会第23回大会「その土地の発酵と循環」',
     date: '2022-10-02',
+  },
+  {
+    year: 2017,
+    title: { ja: '第10回アジア環太平洋音声言語聴覚学術大会 発表' },
+    event: '10th Asia-Pacific Conference on Speech, Language and Hearing（APCSLH2017）',
+    institution: '国際医療福祉大学 成田キャンパス',
+    abstract:
+      '先天性両側性重度難聴からの言語獲得の経験に基づく発表。CIL公式プロフィールに「先天性重度難聴ながらも言語訓練を重ね、言語能力を獲得。第10回アジア環太平洋音声言語聴覚学術大会にて発表」と記載されている。発表題目・共著者の詳細は非公開。',
+    url: 'https://www.cil.tokyo/2021',
   },
 ];
 
@@ -289,6 +306,14 @@ export interface Award {
 }
 
 export const awards: Award[] = [
+  {
+    year: 2024,
+    title: '優秀作（デジタルコンテンツ部門）',
+    org: 'International Students Creative Award 2024（ナレッジキャピタル）',
+    workTitle: 'あの音を編む “KNITTING a Certain re-echo-llection”',
+    recipients: ['菊田有祐', '小川楽生'],
+    url: 'https://kc-i.jp/activity/award/isca/2024/winner/',
+  },
   {
     year: 2024,
     title: 'Audience Award',
@@ -410,5 +435,24 @@ export const academicService: AcademicService[] = [
     institution: '慶應義塾大学',
     startDate: '2023-07-01',
     endDate: '2023-07-02',
+  },
+];
+
+export interface SelectedProgram {
+  year: number;
+  title: string;
+  org: string;
+  role?: string;
+  abstract?: string | null;
+  url?: string | null;
+}
+
+export const selectedPrograms: SelectedProgram[] = [
+  {
+    year: 2021,
+    title: 'CIL（本採択・個人）',
+    org: 'CIL',
+    role: '採択',
+    url: 'https://www.cil.tokyo/2021',
   },
 ];
